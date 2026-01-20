@@ -1,156 +1,181 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Calendar, Eye, EyeOff, Lock, Mail, Phone, User } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const router = useRouter();
+
+  const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    router.replace("/dashboard");
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fbfaf7] px-6">
+    <div className="relative min-h-screen flex items-center justify-center bg-[#f8fafc] px-6 overflow-hidden">
+      {/* Luces de fondo */}
+      <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-[#87CEEB]/20 blur-[100px]" />
+      <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] rounded-full bg-blue-100/40 blur-[100px]" />
 
-      {/* MAIN CARD */}
-      <div className="w-full max-w-5xl bg-[#fbfaf7] shadow-2xl
-                      border border-[#59d2ec] rounded-xl
-                      grid grid-cols-1 md:grid-cols-2 overflow-hidden">
-
-        {/* LEFT BRAND */}
-        <div className="bg-[#fbfaf1] flex items-center justify-center">
-          <img
-            src="/logo.png"
-            alt="X Learning Online"
-            className="h-40 drop-shadow-2xl"
-          />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="relative w-full max-w-[750px] bg-white shadow-2xl shadow-blue-900/10 rounded-[2rem] grid grid-cols-1 md:grid-cols-2 overflow-hidden border border-slate-100"
+      >
+        
+        {/* PANEL IZQUIERDO: Branding Sky Blue */}
+        <div className="hidden md:flex flex-col items-center justify-center bg-gradient-to-br from-[#87CEEB] to-[#6eb5d1] p-6 text-slate-900 relative">
+          <div className="relative z-10 text-center">
+            <motion.img 
+              initial={{ y: -10 }}
+              animate={{ y: 0 }}
+              transition={{ repeat: Infinity, duration: 3, repeatType: "reverse", ease: "easeInOut" }}
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-28 w-auto mx-auto mb-4 drop-shadow-md" 
+            />
+            <p className="text-slate-900/80 text-[10px] font-bold uppercase tracking-widest px-4">
+              Únete a la mejor comunidad de aprendizaje
+            </p>
+          </div>
+          <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
         </div>
 
-        {/* RIGHT REGISTER */}
-        <div className="p-10 flex flex-col justify-center">
+        {/* PANEL DERECHO: Formulario */}
+        <div className="px-8 py-6 flex flex-col justify-center bg-white">
+          <div className="mb-4">
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Crear cuenta</h1>
+            <p className="text-slate-500 text-[10px]">Completa tus datos para empezar</p>
+          </div>
 
-          <h1 className="text-2xl font-bold text-[#161616] mb-6 text-center">
-            Crear cuenta
-          </h1>
-
-          {/* FORM */}
-          <form className="space-y-4">
-
-            <input
-              type="text"
-              placeholder="Nombre completo"
-              className="w-full rounded-lg border border-[#59d2ec]
-                         px-4 py-3 text-sm text-[#161616]
-                         placeholder:text-[#161616]/60
-                         focus:outline-none focus:ring-2 focus:ring-[#59d2ec]"
-            />
-
-            <input
-              type="email"
-              placeholder="Correo electrónico"
-              className="w-full rounded-lg border border-[#59d2ec]
-                         px-4 py-3 text-sm text-[#161616]
-                         placeholder:text-[#161616]/60
-                         focus:outline-none focus:ring-2 focus:ring-[#59d2ec]"
-            />
-
-            {/* TELÉFONO */}
-            <input
-              type="tel"
-              placeholder="Número de teléfono"
-              className="w-full rounded-lg border border-[#59d2ec]
-                         px-4 py-3 text-sm text-[#161616]
-                         placeholder:text-[#161616]/60
-                         focus:outline-none focus:ring-2 focus:ring-[#59d2ec]"
-            />
-
-            {/* FECHA NACIMIENTO (ACCESIBLE) */}
-            <div>
-              <label htmlFor="birthdate" className="sr-only">
-                Fecha de nacimiento
-              </label>
+          <form className="space-y-2.5" onSubmit={handleRegister}>
+            {/* NOMBRE */}
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
               <input
-                id="birthdate"
-                type="date"
-                className="w-full rounded-lg border border-[#59d2ec]
-                           px-4 py-3 text-sm text-[#161616]
-                           focus:outline-none focus:ring-2 focus:ring-[#59d2ec]"
+                type="text"
+                placeholder="Nombre completo"
+                title="Nombre completo"
+                aria-label="Nombre completo"
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
               />
+            </div>
+
+            {/* EMAIL */}
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+              <input
+                type="email"
+                placeholder="Correo electrónico"
+                title="Correo electrónico"
+                aria-label="Correo electrónico"
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {/* TELÉFONO */}
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+                <input
+                  type="tel"
+                  placeholder="Teléfono"
+                  title="Número de teléfono"
+                  aria-label="Número de teléfono"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                />
+              </div>
+              {/* FECHA (Corregido) */}
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+                <input
+                  type="date"
+                  title="Fecha de nacimiento"
+                  aria-label="Fecha de nacimiento"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                />
+              </div>
             </div>
 
             {/* PASSWORD */}
             <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Contraseña"
-                className="w-full rounded-lg border border-[#59d2ec]
-                           px-4 py-3 text-sm text-[#161616]
-                           placeholder:text-[#161616]/60
-                           focus:outline-none focus:ring-2 focus:ring-[#59d2ec]"
+                title="Contraseña"
+                aria-label="Contraseña"
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#161616]/70"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950"
               >
-                {showPassword ? "😲" : "😌"}
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
 
             {/* CONFIRM PASSWORD */}
             <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirmar contraseña"
-                className="w-full rounded-lg border border-[#59d2ec]
-                           px-4 py-3 text-sm text-[#161616]
-                           placeholder:text-[#161616]/60
-                           focus:outline-none focus:ring-2 focus:ring-[#59d2ec]"
+                title="Confirmar contraseña"
+                aria-label="Confirmar contraseña"
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#161616]/70"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950"
               >
-                {showConfirmPassword ? "😲" : "😌"}
+                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
 
-            {/* SUBMIT */}
+            {/* BOTÓN CON RESALTO */}
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#161616]
-                         py-3 text-sm font-semibold text-white
-                         hover:bg-[#029e99] transition"
+              className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white transition-all mt-1
+                         shadow-[0_0_0_0_rgba(135,206,235,0)] 
+                         hover:bg-slate-800 
+                         hover:shadow-[0_10px_20px_-5px_rgba(135,206,235,0.6)] 
+                         hover:-translate-y-0.5
+                         active:scale-[0.96]"
             >
-              Crear cuenta
+              Crear cuenta ahora
             </button>
           </form>
 
-          {/* DIVIDER */}
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-[#59d2ec]" />
-            <span className="text-xs text-[#161616]/60">o</span>
-            <div className="h-px flex-1 bg-[#59d2ec]" />
+          {/* DIVISOR */}
+          <div className="my-4 flex items-center gap-3">
+            <div className="h-[1px] flex-1 bg-slate-100" />
+            <span className="text-[9px] uppercase text-slate-400 font-bold">O</span>
+            <div className="h-[1px] flex-1 bg-slate-100" />
           </div>
 
-          {/* GOOGLE */}
-          <button
-            className="w-full rounded-lg border border-[#59d2ec]
-                       py-3 text-sm flex items-center justify-center gap-3
-                       hover:bg-[#59d2ec]/10 transition text-[#161616]"
-          >
-            <img src="/google.svg" alt="Google" className="h-5" />
+          <button className="flex items-center justify-center gap-2 py-2 border border-slate-200 rounded-xl hover:border-[#87CEEB] hover:bg-[#87CEEB]/5 transition-all text-[10px] font-bold text-slate-900 w-full mb-4">
+            <img src="/google.svg" alt="G" className="h-3.5" />
             Registrarse con Google
           </button>
 
-          {/* FOOTER */}
-          <a
-            href="/login"
-            className="mt-6 text-xs text-center text-[#161616]/70 hover:underline"
-          >
+          <Link href="/login" className="text-center text-[10px] text-slate-400 hover:text-[#87CEEB] transition-colors font-bold">
             ¿Ya tienes cuenta? Inicia sesión
-          </a>
-
+          </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
