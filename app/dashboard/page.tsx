@@ -1,113 +1,255 @@
 "use client";
 
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
-import { BarChart3, GraduationCap, Mail, Phone, PlayCircle, User } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import {
+  Activity,
+  CheckCircle2,
+  Mail,
+  PlayCircle,
+  ShieldCheck,
+  User,
+  Zap
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { auth, db } from "../src/firebase/config";
 
 export default function DashboardPage() {
-  const [level, setLevel] = useState("A1");
+  const router = useRouter();
 
-  // Simulación de datos de usuario (luego los traes de tu DB)
-  const user = {
-    name: "Juan Pérez",
-    email: "juan.perez@example.com",
-    phone: "+52 555 123 4567"
+  const [level, setLevel] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("selectedLevel") || "A1";
+    }
+    return "A1";
+  });
+
+  const [userData, setUserData] = useState({
+    name: "Cargando...",
+    email: "",
+    uid: "",
+  });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUserData({
+            name: data.fullName || user.displayName || "User_Alpha",
+            email: user.email || "",
+            uid: user.uid,
+          });
+        } else {
+          setUserData({
+            name: user.displayName || "User_Alpha",
+            email: user.email || "",
+            uid: user.uid,
+          });
+        }
+      } else {
+        router.replace("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleLevelSelect = (lvl: string) => {
+    setLevel(lvl);
+    localStorage.setItem("selectedLevel", lvl);
   };
 
-  // Simulación de historial por nivel
   const history = [
-    { lvl: "A1", progress: 100, color: "#87CEEB" },
-    { lvl: "A2", progress: 75, color: "#6eb5d1" },
-    { lvl: "B1", progress: 40, color: "#94a3b8" },
+    { lvl: "A1", progress: 100, color: "#10b981", status: "Completed" },
+    { lvl: "A2", progress: 75, color: "#87CEEB", status: "In Progress" },
+    { lvl: "B1", progress: 40, color: "#64748b", status: "Analyzing" },
   ];
 
   return (
-    <div className="relative min-h-screen bg-[#f8fafc] text-slate-950 pb-20">
-      {/* Fondo decorativo coherente */}
-      <div className="absolute top-0 right-0 w-[30%] h-[30%] rounded-full bg-[#87CEEB]/10 blur-[120px] -z-10" />
-      
-      {/* 1. TOP BAR / USER INFO */}
-      <nav className="bg-white border-b border-slate-100 px-6 py-4 shadow-sm">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-[#87CEEB] to-blue-400 flex items-center justify-center text-white shadow-md">
-              <User size={24} />
+    <div className="min-h-screen bg-[#0f172a] text-white pb-20 font-sans selection:bg-[#87CEEB] selection:text-slate-900">
+      {/* HEADER */}
+      <div className="bg-slate-900 border-b border-white/5 pt-12 pb-20 px-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#87CEEB] to-transparent opacity-50" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+            <div className="flex items-center gap-8">
+              <div className="relative">
+                <div className="h-24 w-24 rounded-3xl bg-slate-800 border-2 border-[#87CEEB]/20 flex items-center justify-center text-[#87CEEB] shadow-[0_0_30px_rgba(135,206,235,0.15)]">
+                  <User size={48} strokeWidth={1.5} />
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-1.5 rounded-lg border-4 border-slate-900">
+                  <ShieldCheck size={16} className="text-white" />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <motion.div
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                  >
+                    <Activity size={18} className="text-[#87CEEB]" />
+                  </motion.div>
+                  <h1 className="text-3xl font-black uppercase italic tracking-widest">
+                    {userData.name.split(" ")[0]}
+                    <span className="text-[#87CEEB]">_OPERATOR</span>
+                  </h1>
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                  <span className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-md border border-white/5">
+                    <Mail size={12} className="text-[#87CEEB]" />
+                    {userData.email}
+                  </span>
+                  <span className="bg-white/5 px-3 py-1.5 rounded-md border border-white/5">
+                    ID: {userData.uid.slice(0, 8)}...
+                  </span>
+                </div>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-bold">{user.name}</h2>
-              <div className="flex gap-4 text-[10px] text-slate-500 font-medium">
-                <span className="flex items-center gap-1"><Mail size={12} /> {user.email}</span>
-                <span className="flex items-center gap-1"><Phone size={12} /> {user.phone}</span>
+
+            <div className="bg-slate-800/50 border border-white/10 p-6 rounded-[2.5rem] backdrop-blur-xl w-full md:w-96 shadow-2xl relative">
+              <div className="absolute top-4 right-6">
+                <Zap size={14} className="text-[#87CEEB] animate-pulse" />
+              </div>
+              <div className="flex justify-between text-[10px] font-black uppercase mb-4 tracking-[0.2em] text-slate-400">
+                <span>{level}_ACTIVE</span>
+                <span className="text-[#87CEEB]"></span>
+              </div>
+              <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden p-[2px]">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  className="h-full bg-gradient-to-r from-[#87CEEB] to-blue-400 rounded-full"
+                />
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
-            <GraduationCap size={16} className="text-[#87CEEB]" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Nivel Actual: {level}</span>
-          </div>
         </div>
-      </nav>
+      </div>
 
-      <main className="max-w-6xl mx-auto px-6 mt-10 space-y-10">
-        
-        {/* 2. SELECTOR DE NIVEL PARA SIMULACIÓN */}
-        <section className="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-slate-50 text-center">
-          <h3 className="text-lg font-bold mb-2">Simulador de Certificación</h3>
-          <p className="text-slate-500 text-xs mb-6">Selecciona el nivel que deseas practicar hoy</p>
-          
-          <div className="flex flex-wrap justify-center gap-3 mb-8">
-            {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setLevel(lvl)}
-                className={`w-14 h-14 rounded-2xl text-xs font-bold transition-all border-2 
-                  ${level === lvl 
-                    ? "bg-[#87CEEB] border-[#87CEEB] text-white shadow-lg shadow-[#87CEEB]/40 scale-110" 
-                    : "bg-white border-slate-100 text-slate-400 hover:border-[#87CEEB]/30"}`}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
-
-          <Link href="/modulos">
-            <button className="px-10 py-3 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-2 mx-auto hover:bg-slate-800 transition-all hover:shadow-[0_10px_20px_-5px_rgba(135,206,235,0.6)] active:scale-95">
-              <PlayCircle size={18} />
-              VAMOS A PRACTICAR
-            </button>
-          </Link>
-        </section>
-
-        {/* 3. HISTORIAL DE PROGRESO POR NIVEL */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <BarChart3 size={20} className="text-[#87CEEB]" />
-            <h3 className="text-sm font-bold uppercase tracking-widest">Historial de Progreso</h3>
-          </div>
-          
-          <div className="grid gap-4">
-            {history.map((item) => (
-              <div key={item.lvl} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-bold text-slate-700">Nivel {item.lvl}</span>
-                  <span className="text-[10px] font-bold text-[#87CEEB]">{item.progress}% Completado</span>
+      {/* MAIN */}
+      <main className="max-w-7xl mx-auto px-8 -mt-10 relative z-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* CONTROL PANEL */}
+          <section className="lg:col-span-8">
+            <div className="bg-white rounded-[3.5rem] p-12 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] text-slate-900">
+              <div className="flex justify-between items-center mb-10">
+                <div>
+                  <h3 className="text-3xl font-black uppercase mb-1">
+                    Target_Selection
+                  </h3>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">
+                    Define your training parameters
+                  </p>
                 </div>
-                {/* Barra de Progreso */}
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div 
+                <PlayCircle size={32} />
+              </div>
+
+              {/* 🔥 LEVEL SELECTOR MEJORADO */}
+              <div className="grid grid-cols-3 gap-4 mb-12">
+                {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => {
+                  const isActive = level === lvl;
+
+                  return (
+                    <motion.button
+                      key={lvl}
+                      onClick={() => handleLevelSelect(lvl)}
+                      whileHover={{ y: -6, scale: 1.05 }}
+                      whileTap={{ scale: 0.96 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 18,
+                      }}
+                      className={`relative h-24 rounded-2xl border overflow-hidden
+                        ${
+                          isActive
+                            ? "bg-slate-900 border-[#87CEEB] shadow-[0_0_30px_rgba(135,206,235,0.35)]"
+                            : "bg-slate-50 border-slate-200 hover:border-[#87CEEB]/60"
+                        }`}
+                    >
+                      <div className="flex flex-col items-center justify-center h-full relative z-10">
+                        <span
+                          className={`text-[9px] font-black uppercase tracking-[0.35em]
+                          ${
+                            isActive
+                              ? "text-[#87CEEB]"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          Level
+                        </span>
+                        <span
+                          className={`text-3xl font-black italic
+                          ${
+                            isActive
+                              ? "text-[#87CEEB]"
+                              : "text-slate-700"
+                          }`}
+                        >
+                          {lvl}
+                        </span>
+                      </div>
+
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeGlow"
+                          className="absolute inset-0 bg-gradient-to-tr from-[#87CEEB]/20 to-transparent"
+                        />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => router.push("/modulos")}
+                className="w-full py-8 bg-slate-900 text-[#87CEEB] rounded-3xl font-black text-xl flex items-center justify-center gap-5 hover:bg-slate-800 transition-all active:scale-95"
+              >
+                INITIALIZE TRAINING
+                <PlayCircle size={30} />
+              </button>
+            </div>
+          </section>
+
+          {/* ANALYTICS */}
+          <section className="lg:col-span-4 space-y-6">
+            {history.map((item, i) => (
+              <motion.div
+                key={item.lvl}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-white/5"
+              >
+                <div className="flex justify-between mb-4">
+                  <div className="font-black">{item.lvl}</div>
+                  {item.progress === 100 && (
+                    <CheckCircle2 className="text-emerald-400" />
+                  )}
+                </div>
+
+                <div className="h-2 bg-white/10 rounded-full">
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${item.progress}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
                     className="h-full rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
-
+          </section>
+        </div>
       </main>
     </div>
   );

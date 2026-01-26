@@ -1,137 +1,81 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, Headphones, Mic2, PenTool, Trophy } from "lucide-react";
+import { ArrowLeft, BookOpen, Headphones, Mic2, PenTool, Zap } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function ModulosPage() {
-  // Simulación de progreso por módulo
-  const modules = [
-    {
-      id: "reading",
-      title: "Reading",
-      description: "Mejora tu comprensión lectora y vocabulario.",
-      icon: <BookOpen size={32} />,
-      progress: 75,
-      color: "#87CEEB",
-      path: "/modulos/reading"
-    },
-    {
-      id: "listening",
-      title: "Listening",
-      description: "Entrena tu oído con ejercicios de audio nativo.",
-      icon: <Headphones size={32} />,
-      progress: 45,
-      color: "#6eb5d1",
-      path: "/modulos/listening"
-    },
-    {
-      id: "writing",
-      title: "Writing",
-      description: "Practica gramática y redacción de textos.",
-      icon: <PenTool size={32} />,
-      progress: 30,
-      color: "#94a3b8",
-      path: "/modulos/writing"
-    },
-    {
-      id: "speaking",
-      title: "Speaking",
-      description: "Perfecciona tu pronunciación y fluidez.",
-      icon: <Mic2 size={32} />,
-      progress: 10,
-      color: "#1e293b",
-      path: "/modulos/speaking"
+  const [selectedLevel, setSelectedLevel] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("selectedLevel") || "A1";
     }
+    return "A1";
+  });
+
+  const modules = [
+    { id: "reading", title: "Reading", icon: <BookOpen size={28} />, progress: 75, color: "#10b981" },
+    { id: "listening", title: "Listening", icon: <Headphones size={28} />, progress: 45, color: "#87CEEB" },
+    { id: "writing", title: "Writing", icon: <PenTool size={28} />, progress: 30, color: "#64748b" },
+    { id: "speaking", title: "Speaking", icon: <Mic2 size={28} />, progress: 10, color: "#0f172a" }
   ];
 
-  const totalProgress = 40; // Ejemplo de promedio general
-
   return (
-    <div className="relative min-h-screen bg-[#f8fafc] text-slate-950 pb-20">
-      {/* Luces de fondo coherentes con el resto de la app */}
-      <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[40%] rounded-full bg-[#87CEEB]/10 blur-[120px] -z-10" />
-
-      {/* HEADER DE MÓDULOS */}
-      <div className="bg-white border-b border-slate-100 px-6 py-8 shadow-sm">
-        <div className="max-w-6xl mx-auto">
-          <Link 
-            href="/dashboard" 
-            className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-[#87CEEB] transition-colors uppercase tracking-widest mb-4"
-          >
-            <ArrowLeft size={14} /> Volver al Dashboard
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-20">
+      <div className="bg-slate-900 text-white pt-16 pb-24 px-8 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto relative z-10">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-[10px] font-black text-[#87CEEB] uppercase tracking-widest mb-8 hover:text-white transition-all">
+            <ArrowLeft size={16} /> Volver al Dashboard
           </Link>
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Módulos de Práctica</h1>
-              <p className="text-slate-500 text-xs mt-1">Nivel Seleccionado: <span className="text-[#87CEEB] font-bold">A1</span></p>
-            </div>
-
-            {/* BARRA DE PROGRESO GLOBAL DEL NIVEL */}
-            <div className="w-full md:w-72 space-y-2">
-              <div className="flex justify-between items-center text-[10px] font-bold uppercase text-slate-400">
-                <span>Progreso del Nivel</span>
-                <span className="text-slate-900">{totalProgress}%</span>
+              <div className="flex items-center gap-3 mb-2">
+                <Zap size={24} className="text-[#87CEEB] fill-[#87CEEB]" />
+                <h1 className="text-4xl font-black italic uppercase">Módulos de Práctica</h1>
               </div>
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${totalProgress}%` }}
-                  className="h-full bg-gradient-to-r from-[#87CEEB] to-blue-400 rounded-full"
-                />
+              <p className="text-slate-400 text-sm">
+                Nivel Seleccionado: <span className="text-[#87CEEB] font-black px-2 py-0.5 bg-white/10 rounded-md">{selectedLevel}</span>
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] w-full md:w-80 shadow-2xl">
+              <div className="flex justify-between text-[10px] font-black uppercase mb-3 text-slate-400">
+                <span>Progreso General</span>
+                <span className="text-[#87CEEB]">40%</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-[#87CEEB] w-[40%] shadow-[0_0_15px_#87CEEB]" />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* GRID DE MÓDULOS (CARDS) */}
-      <main className="max-w-6xl mx-auto px-6 mt-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {modules.map((mod, index) => (
+      <main className="max-w-7xl mx-auto px-8 -mt-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {modules.map((mod, i) => (
             <motion.div
               key={mod.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl group hover:border-[#87CEEB] transition-all relative"
             >
-              <Link href={mod.path} className="group block">
-                <div className="relative h-full bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-blue-900/5 transition-all 
-                                hover:border-[#87CEEB] hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(135,206,235,0.3)]">
-                  
-                  {/* ICONO CON CÍRCULO DE FONDO */}
-                  <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-900 mb-6 group-hover:bg-[#87CEEB] group-hover:text-white transition-colors">
-                    {mod.icon}
-                  </div>
-
-                  <h3 className="text-lg font-bold mb-2">{mod.title}</h3>
-                  <p className="text-slate-500 text-[11px] leading-relaxed mb-8">
-                    {mod.description}
-                  </p>
-
-                  {/* BARRA DE PROGRESO INDIVIDUAL (Lo que pediste si el usuario se sale) */}
-                  <div className="mt-auto pt-4 border-t border-slate-50">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Completado</span>
-                      <span className="text-[10px] font-bold text-slate-900">{mod.progress}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${mod.progress}%`, backgroundColor: mod.color }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* INDICADOR VISUAL DE ESTADO */}
-                  {mod.progress === 100 && (
-                    <div className="absolute top-6 right-6 text-yellow-500">
-                      <Trophy size={20} />
-                    </div>
-                  )}
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-900 mb-8 group-hover:bg-slate-900 group-hover:text-[#87CEEB] transition-all">
+                {mod.icon}
+              </div>
+              <h3 className="text-lg font-black tracking-tight mb-4">{mod.title}</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-end text-[10px] font-black text-slate-400 uppercase">
+                  <span>Progreso</span>
+                  <span className="text-slate-900">{mod.progress}%</span>
                 </div>
-              </Link>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${mod.progress}%`, backgroundColor: mod.color }} />
+                </div>
+              </div>
+              <button className="w-full mt-8 py-3 bg-slate-50 rounded-xl text-[10px] font-black uppercase text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                Entrar al Módulo
+              </button>
             </motion.div>
           ))}
         </div>
