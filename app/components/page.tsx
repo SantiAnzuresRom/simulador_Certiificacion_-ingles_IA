@@ -1,4 +1,5 @@
 "use client";
+
 type Props = {
   label: string;
   value: number; // 0 - 100
@@ -44,7 +45,7 @@ export default function ScoreRing({ label, value, color }: Props) {
         </text>
       </svg>
 
-      <p className="mt-2 text-sm font-semibold text-[#161616]">
+      <p className="mt-2 text-sm font-semibold">
         {label}
       </p>
     </div>
