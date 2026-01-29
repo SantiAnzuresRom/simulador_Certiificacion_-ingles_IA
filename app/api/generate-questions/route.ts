@@ -8,27 +8,33 @@ export async function POST(req: Request) {
     const { type, level } = await req.json();
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // El que usas según tu imagen
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "You are an English exam generator. Return ONLY a JSON object. " +
-                   "Structure: { 'title': 'string', 'passage': 'string', 'questions': [{ 'question': 'string', 'options': ['string'], 'correctAnswer': 'string' }] }"
+          content: `You are an English exam generator. Return ONLY a JSON object. 
+          Structure: { 
+            "title": "string", 
+            "passage": "string", 
+            "questions": [
+              { "question": "string", "options": ["string", "string", "string", "string"], "correctAnswer": "string" }
+            ] 
+          }
+          IMPORTANT: You MUST generate EXACTLY 10 questions.`
         },
-        { role: "user", content: `Generate a ${type} exam for level ${level}` }
+        { role: "user", content: `Generate a professional ${type} exam for level ${level}` }
       ],
-      response_format: { type: "json_object" }, // ESTO ES CLAVE
+      response_format: { type: "json_object" },
     });
 
     const data = JSON.parse(completion.choices[0].message.content || "{}");
     
-    // Si GPT falla y no manda preguntas, mandamos un error claro
-    if (!data.questions) {
-       return NextResponse.json({ error: "GPT did not generate questions" }, { status: 500 });
+    if (!data.questions || data.questions.length === 0) {
+       return NextResponse.json({ error: "GPT failed" }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: "Master API Connection Failed" }, { status: 500 });
+    return NextResponse.json({ error: "API Connection Failed" }, { status: 500 });
   }
 }

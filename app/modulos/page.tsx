@@ -1,177 +1,168 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, Headphones, Mic2, PenTool, Zap } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { motion } from "framer-motion";
+import { BookOpen, ChevronRight, Headphones, Home, Mic2, PenTool, Sparkles } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { auth, db } from "../src/firebase/config";
 
 export default function ModulosPage() {
-  const router = useRouter();
-  const [selectedLevel, setSelectedLevel] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("selectedLevel") || "A1";
-    }
-    return "A1";
-  });
-
-  const [userName, setUserName] = useState<string | null>(null);
-  
-  // ESTADO PARA PROGRESO REAL DESDE FIREBASE
-  const [progressData, setProgressData] = useState({
-    reading: 0,
-    listening: 0,
-    writing: 0,
-    speaking: 0,
-  });
+  const [percentages, setPercentages] = useState({ reading: 0, listening: 0, writing: 0, speaking: 0 });
+  const [overallProgress, setOverallProgress] = useState(0);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-
-      // 1. Obtener nombre del usuario
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        setUserName(userSnap.data().nombre);
-      }
-
-      // 2. Escuchar progreso en tiempo real (según el nivel seleccionado)
-      const progressRef = doc(db, "user_progress", user.uid, "levels", selectedLevel);
-      const unsubProgress = onSnapshot(progressRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setProgressData({
-            reading: data.reading || 0,
-            listening: data.listening || 0,
-            writing: data.writing || 0,
-            speaking: data.speaking || 0,
-          });
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const progressRef = doc(db, "user_progress", user.uid);
+        const snap = await getDoc(progressRef);
+        if (snap.exists() && snap.data().modules) {
+          const m = snap.data().modules;
+          const scores = {
+            reading: m.reading || 0,
+            listening: m.listening || 0,
+            writing: m.writing || 0,
+            speaking: m.speaking || 0,
+          };
+          setPercentages(scores);
+          const average = (scores.reading + scores.listening + scores.writing + scores.speaking) / 4;
+          setOverallProgress(Math.round(average));
         }
-      });
-
-      return () => unsubProgress();
+      }
     });
+    return () => unsub();
+  }, []);
 
-    return () => unsubAuth();
-  }, [selectedLevel]);
-
-  // Cálculo del progreso general basado en datos reales
-  const generalProgress = Math.round(
-    (progressData.reading + progressData.listening + progressData.writing + progressData.speaking) / 4
-  );
-
-  const modules = [
-    { id: "reading", title: "Reading", icon: <BookOpen size={28} />, progress: progressData.reading, color: "#10b981" },
-    { id: "listening", title: "Listening", icon: <Headphones size={28} />, progress: progressData.listening, color: "#87CEEB" },
-    { id: "writing", title: "Writing", icon: <PenTool size={28} />, progress: progressData.writing, color: "#64748b" },
-    { id: "speaking", title: "Speaking", icon: <Mic2 size={28} />, progress: progressData.speaking, color: "#0f172a" }
+  const modulos = [
+    { id: "reading", title: "Reading", icon: <BookOpen />, path: "/modulos/reading", color: "from-cyan-500 to-blue-600", shadow: "shadow-cyan-500/20", p: percentages.reading },
+    { id: "listening", title: "Listening", icon: <Headphones />, path: "/modulos/listening", color: "from-blue-500 to-indigo-600", shadow: "shadow-blue-500/20", p: percentages.listening },
+    { id: "writing", title: "Writing", icon: <PenTool />, path: "/modulos/writing", color: "from-purple-500 to-pink-600", shadow: "shadow-purple-500/20", p: percentages.writing },
+    { id: "speaking", title: "Speaking", icon: <Mic2 />, path: "/modulos/speaking", color: "from-emerald-500 to-teal-600", shadow: "shadow-emerald-500/20", p: percentages.speaking },
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-20">
-      {/* HEADER */}
-      <div className="bg-slate-900 text-white pt-16 pb-24 px-8 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
+    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 overflow-y-auto scrollbar-hide relative selection:bg-cyan-500/30">
+      {/* OCULTAR SCROLLBAR */}
+      <style jsx global>{`
+        ::-webkit-scrollbar { display: none; }
+        html { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
-          {/* USER BADGE */}
-          {userName && (
-            <div className="absolute top-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
-              <div className="w-8 h-8 rounded-full bg-[#87CEEB] text-slate-900 flex items-center justify-center text-xs font-black uppercase">
-                {userName.charAt(0)}
-              </div>
-              <span className="text-[11px] font-black uppercase tracking-wider text-white">
-                {userName}
-              </span>
-            </div>
-          )}
+      {/* BACKGROUND DECOR */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 blur-[120px] rounded-full" />
+      </div>
 
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-[10px] font-black text-[#87CEEB] uppercase tracking-widest mb-8 hover:text-white transition-all"
-          >
-            <ArrowLeft size={16} /> Volver al Dashboard
-          </Link>
-
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+      <main className="max-w-5xl mx-auto relative z-10">
+        <header className="flex flex-col mb-20">
+          <div className="flex justify-between items-center w-full mb-12">
+            {/* LOGO3 GIGANTE */}
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+              <Image 
+                src="/logo3.png" 
+                alt="Logo" 
+                width={350} 
+                height={110} 
+                className="drop-shadow-[0_0_20px_rgba(6,182,212,0.3)] object-contain"
+                priority 
+              />
+            </motion.div>
+            
+            <Link href="/dashboard" className="p-4 bg-white/5 border border-white/10 rounded-[24px] hover:bg-white/10 hover:border-white/20 transition-all text-slate-400 hover:text-white group backdrop-blur-md">
+              <Home size={28} className="group-hover:scale-110 transition-transform" />
+            </Link>
+          </div>
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 px-2">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Zap size={24} className="text-[#87CEEB] fill-[#87CEEB]" />
-                <h1 className="text-4xl font-black italic uppercase">
-                  Módulos de Práctica
-                </h1>
+              <h1 className="text-7xl font-black italic uppercase tracking-tighter leading-[0.8] mb-4 text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">
+                Módulos
+              </h1>
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-cyan-400" />
+                <p className="text-cyan-400/60 font-black uppercase text-[11px] tracking-[0.6em] italic">Hyper_Learning_Protocol</p>
               </div>
-
-              <p className="text-slate-400 text-sm">
-                Nivel Seleccionado:{" "}
-                <span className="text-[#87CEEB] font-black px-2 py-0.5 bg-white/10 rounded-md">
-                  {selectedLevel}
-                </span>
-              </p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] w-full md:w-80 shadow-2xl">
-              <div className="flex justify-between text-[10px] font-black uppercase mb-3 text-slate-400">
-                <span>Progreso General</span>
-                <span className="text-[#87CEEB]">{generalProgress}%</span>
+            {/* OVERALL PROGRESS CARD */}
+            <div className="bg-slate-900/40 backdrop-blur-2xl p-6 rounded-[32px] border border-white/5 min-w-[280px]">
+              <div className="flex justify-between items-end mb-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Global Mastery</span>
+                <span className="text-3xl font-black italic text-cyan-400">{overallProgress}%</span>
               </div>
-              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#87CEEB] transition-all duration-700" 
-                  style={{ width: `${generalProgress}%`, boxShadow: "0 0 15px #87CEEB" }}
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${overallProgress}%` }} 
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_20px_rgba(6,182,212,0.5)]" 
                 />
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* MAIN */}
-      <main className="max-w-7xl mx-auto px-8 -mt-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {modules.map((mod, i) => (
-            <motion.div
-              key={mod.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl group hover:border-[#87CEEB] transition-all relative"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-900 mb-8 group-hover:bg-slate-900 group-hover:text-[#87CEEB] transition-all">
-                {mod.icon}
-              </div>
+        {/* GRID DE CARDVIEWS ELEGANTES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {modulos.map((m, index) => (
+            <Link href={m.path} key={m.id}>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group relative h-48 bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[40px] p-8 overflow-hidden transition-all hover:border-white/20"
+              >
+                {/* EFECTO DE LUZ AL PASAR EL MOUSE */}
+                <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${m.color} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`} />
+                
+                <div className="flex h-full justify-between items-center relative z-10">
+                  <div className="flex items-center gap-8">
+                    {/* ICONO CON GRADIENTE */}
+                    <div className={`w-20 h-20 rounded-[28px] bg-gradient-to-br ${m.color} flex items-center justify-center text-[#020617] shadow-2xl transition-transform group-hover:rotate-6`}>
+                      {m.icon}
+                    </div>
+                    
+                    <div>
+                      <h2 className="text-3xl font-black uppercase italic tracking-tighter leading-none mb-2 group-hover:text-white transition-colors">
+                        {m.title}
+                      </h2>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{m.p}% MASTERED</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-              <h3 className="text-lg font-black tracking-tight mb-4">
-                {mod.title}
-              </h3>
-
-              <div className="space-y-4">
-                <div className="flex justify-between items-end text-[10px] font-black text-slate-400 uppercase">
-                  <span>Progreso</span>
-                  <span className="text-slate-900">{mod.progress}%</span>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="bg-white/5 p-3 rounded-full group-hover:bg-white/10 transition-colors">
+                      <ChevronRight size={24} className="text-slate-600 group-hover:text-white" />
+                    </div>
+                  </div>
                 </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div
+
+                {/* BARRA DE PROGRESO INFERIOR MINI */}
+                <div className="absolute bottom-0 left-0 w-full h-1.5 bg-white/5">
+                  <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${mod.progress}%` }}
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: mod.color }}
+                    animate={{ width: `${m.p}%` }}
+                    className={`h-full bg-gradient-to-r ${m.color}`}
                   />
                 </div>
-              </div>
-
-              <button 
-                onClick={() => router.push(`/modulos/${mod.id}`)}
-                className="w-full mt-8 py-3 bg-slate-50 rounded-xl text-[10px] font-black uppercase text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all"
-              >
-                Entrar al Módulo
-              </button>
-            </motion.div>
+              </motion.div>
+            </Link>
           ))}
+        </div>
+
+        {/* FOOTER DECOR */}
+        <div className="mt-20 flex justify-center opacity-10 grayscale">
+          <Image src="/logo2.png" alt="X" width={60} height={60} />
         </div>
       </main>
     </div>
