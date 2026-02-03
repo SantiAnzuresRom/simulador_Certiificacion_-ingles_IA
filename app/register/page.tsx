@@ -2,7 +2,8 @@
 
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { motion } from "framer-motion";
-import { Calendar, Eye, EyeOff, Loader2, Lock, Mail, Phone, User } from "lucide-react";
+import { ArrowRight, Calendar, Eye, EyeOff, Loader2, Lock, Mail, Phone, User } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -38,7 +39,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // 1. Crear usuario en Firebase Auth
+      // 1. Tu lógica original de Firebase
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
         formData.email, 
@@ -46,8 +47,7 @@ export default function RegisterPage() {
       );
       const user = userCredential.user;
 
-      // 2. Enviar datos al Backend de FastAPI
-      // IMPORTANTE: Asegúrate de que FastAPI esté corriendo en el puerto 8000
+      // 2. Tu conexión original a FastAPI
       const response = await fetch("http://localhost:8000/api/v1/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,6 +93,7 @@ export default function RegisterPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#f8fafc] px-6 overflow-hidden">
+      {/* Luces de fondo decorativas */}
       <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-[#87CEEB]/20 blur-[100px]" />
       <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] rounded-full bg-blue-100/40 blur-[100px]" />
 
@@ -100,77 +101,92 @@ export default function RegisterPage() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
-        className="relative w-full max-w-[750px] bg-white shadow-2xl shadow-blue-900/10 rounded-[2rem] grid grid-cols-1 md:grid-cols-2 overflow-hidden border border-slate-100"
+        className="relative w-full max-w-[900px] bg-white shadow-2xl shadow-blue-900/10 rounded-[2.5rem] grid grid-cols-1 md:grid-cols-2 overflow-hidden border border-slate-100"
       >
-        {/* PANEL IZQUIERDO */}
-        <div className="hidden md:flex flex-col items-center justify-center bg-gradient-to-br from-[#87CEEB] to-[#6eb5d1] p-6 text-slate-900 relative">
+        {/* PANEL IZQUIERDO: Branding Oscuro con Logo 1 */}
+        <div className="hidden md:flex flex-col items-center justify-center bg-[#0f172a] p-12 text-white relative overflow-hidden">
           <div className="relative z-10 text-center">
-            <motion.img 
-              initial={{ y: -10 }}
-              animate={{ y: 0 }}
-              transition={{ repeat: Infinity, duration: 3, repeatType: "reverse", ease: "easeInOut" }}
-              src="/logo.png" 
-              alt="Logo" 
-              className="h-28 w-auto mx-auto mb-4 drop-shadow-md" 
-            />
-            <p className="text-slate-900/80 text-[10px] font-bold uppercase tracking-widest px-4">
-              ÚNETE A LA MEJOR COMUNIDAD DE APRENDIZAJE
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            >
+              <Image 
+                src="/logo.png" 
+                alt="Main Logo" 
+                width={200} 
+                height={55} 
+                className="mx-auto mb-8 drop-shadow-[0_0_15px_rgba(135,206,235,0.3)]" 
+              />
+            </motion.div>
+            <h2 className="text-lg font-black uppercase tracking-[0.3em] italic mb-2 text-[#87CEEB]">
+              
+            </h2>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+              Tu mejor aliado para triunfar
             </p>
           </div>
-          <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
+          
+          {/* Logo 2 como decoración sutil */}
+          <div className="absolute bottom-[-20px] left-[-20px] opacity-10 pointer-events-none rotate-12">
+             <Image src="/logo2.png" alt="Decoration" width={180} height={180} />
+          </div>
+          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
         </div>
 
-        {/* PANEL DERECHO */}
-        <div className="px-8 py-6 flex flex-col justify-center bg-white">
-          <div className="mb-4">
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Crear cuenta</h1>
-            <p className="text-slate-500 text-[10px]">Completa tus datos para empezar</p>
+        {/* PANEL DERECHO: Tu formulario original */}
+        <div className="px-10 py-10 flex flex-col justify-center bg-white">
+          <div className="mb-6 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+              <span className="text-[9px] font-black text-[#87CEEB] uppercase tracking-[0.3em]">Registry_Protocol</span>
+              <div className="h-[1px] w-8 bg-[#87CEEB]/30" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Crear Cuenta</h1>
           </div>
 
-          <form className="space-y-2.5" onSubmit={handleRegister}>
+          <form className="space-y-3" onSubmit={handleRegister}>
             <div className="relative">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
               <input
                 name="fullName"
                 type="text"
                 placeholder="Nombre completo"
-                title="Nombre completo"
+                title="Ingresa tu nombre completo"
                 required
                 value={formData.fullName}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-12 py-3 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] outline-none font-bold"
               />
             </div>
 
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
               <input
                 name="email"
                 type="email"
                 placeholder="Correo electrónico"
-                title="Email"
+                title="Ingresa tu correo"
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-12 py-3 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] outline-none font-bold"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
                 <input
                   name="phone"
                   type="tel"
                   placeholder="Teléfono"
-                  title="Teléfono"
+                  title="Tu número de teléfono"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-12 py-3 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] outline-none font-bold"
                 />
               </div>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
                 <input
                   name="birthDate"
                   type="date"
@@ -178,70 +194,73 @@ export default function RegisterPage() {
                   required
                   value={formData.birthDate}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-12 py-3 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] outline-none font-bold"
                 />
               </div>
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
               <input
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Contraseña"
-                title="Contraseña"
+                title="Crea una contraseña"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-12 py-3 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] outline-none font-bold"
               />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950">
-                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-950 size-3.5" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
               <input
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirmar contraseña"
-                title="Confirmar contraseña"
+                title="Repite tu contraseña"
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-10 py-2.5 text-xs text-slate-950 placeholder:text-slate-400 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/30 focus:border-[#87CEEB] outline-none font-medium"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-12 py-3 text-xs text-slate-950 transition-all focus:bg-white focus:ring-4 focus:ring-[#87CEEB]/20 focus:border-[#87CEEB] outline-none font-bold"
               />
-              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950">
-                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white transition-all mt-1 shadow-md hover:bg-slate-800 flex justify-center items-center"
+              className="w-full rounded-2xl bg-slate-900 py-4 text-[11px] font-black text-white uppercase tracking-[0.2em] transition-all mt-4 hover:bg-[#87CEEB] hover:text-slate-900 flex justify-center items-center shadow-xl active:scale-[0.98] disabled:opacity-70 group"
             >
-              {isLoading ? <Loader2 className="animate-spin" size={16} /> : "Crear cuenta ahora"}
+              {isLoading ? <Loader2 className="animate-spin" size={18} /> : (
+                <span className="flex items-center gap-2">Registrarme Ahora <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" /></span>
+              )}
             </button>
           </form>
 
-          <div className="my-4 flex items-center gap-3">
+          <div className="my-5 flex items-center gap-4">
             <div className="h-[1px] flex-1 bg-slate-100" />
-            <span className="text-[9px] uppercase text-slate-400 font-bold">O</span>
+            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">O accede con</span>
             <div className="h-[1px] flex-1 bg-slate-100" />
           </div>
 
           <button 
             type="button"
             onClick={handleGoogleRegister}
-            className="flex items-center justify-center gap-2 py-2 border border-slate-200 rounded-xl hover:border-[#87CEEB] hover:bg-[#87CEEB]/5 transition-all text-[10px] font-bold text-slate-900 w-full mb-4"
+            className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-2xl hover:border-[#87CEEB] hover:bg-[#87CEEB]/5 transition-all text-[10px] font-black text-slate-900 uppercase w-full mb-4"
           >
-            <img src="/google.svg" alt="G" className="h-3.5" />
-            Registrarse con Google
+            <img src="/google.svg" alt="G" className="h-4" />
+            Registro con Google
           </button>
 
-          <Link href="/login" className="text-center text-[10px] text-slate-400 hover:text-[#87CEEB] transition-colors font-bold">
+          <Link href="/login" className="flex items-center justify-center gap-2 text-center text-[10px] text-slate-400 hover:text-[#87CEEB] transition-colors font-black uppercase tracking-widest group">
+            <Image src="/logo2.png" alt="L2" width={14} height={14} className="opacity-50 group-hover:opacity-100 transition-opacity" />
             ¿Ya tienes cuenta? Inicia sesión
           </Link>
         </div>
