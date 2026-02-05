@@ -2,33 +2,59 @@
 
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { motion } from "framer-motion";
-import { ArrowLeft, Award, Mic, MicOff, RotateCcw, Send, Volume2 } from "lucide-react";
-import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Award,
+  Loader2,
+  Mic,
+  MicOff,
+  RotateCcw,
+  Send,
+  Volume2
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { auth, db } from "../../src/firebase/config";
 
-// 1. Definimos interfaces para que TypeScript esté feliz sin usar 'any'
-interface ISpeechRecognitionEvent {
-  results: {
-    [key: number]: {
-      [key: number]: {
-        transcript: string;
-      };
+// --- 1. DEFINICIÓN DE TIPOS REALES (Sin 'any') ---
+// Esto mata el error "Unexpected any" de raíz
+interface SpeechRecognitionResult {
+  readonly [index: number]: {
+    readonly [index: number]: {
+      readonly transcript: string;
     };
   };
 }
 
+interface SpeechRecognitionEvent extends Event {
+  readonly results: SpeechRecognitionResult;
+}
+
+// Interfaces para el constructor y la instancia
 interface ISpeechRecognition extends EventTarget {
   lang: string;
   continuous: boolean;
-  start: () => void;
-  stop: () => void;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
   onstart: () => void;
-  onresult: (event: ISpeechRecognitionEvent) => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: { error: string }) => void;
   onend: () => void;
+}
+
+// Extensión global de Window con tipos específicos
+declare global {
+  interface Window {
+    SpeechRecognition: {
+      new (): ISpeechRecognition;
+    };
+    webkitSpeechRecognition: {
+      new (): ISpeechRecognition;
+    };
+  }
 }
 
 interface SpeakingQuestion {
@@ -49,20 +75,22 @@ export default function SpeakingModule() {
   const fetchSpeakingData = useCallback(async (uid: string) => {
     try {
       setLoading(true);
-      const progressRef = doc(db, "user_progress", uid);
-      const snap = await getDoc(progressRef);
-      const levelToUse = snap.exists() ? snap.data().currentLevel : "A1";
+      const snap = await getDoc(doc(db, "user_progress", uid));
+      // Según el plan de Certifica AI, el historial es por nivel 
+      const level = snap.exists() ? snap.data().currentLevel : "A1";
 
       const res = await fetch("http://127.0.0.1:8000/generate-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "speaking", level: levelToUse, count: 10 })
+        body: JSON.stringify({ type: "speaking", level })
       });
       
       const data = await res.json();
-      setPhrases(data.questions);
+      const questions = data.questions || data.items || [{ question: "Hello, how are you today?" }];
+      setPhrases(questions);
     } catch (e) {
-      console.error("Error cargando frases:", e);
+      console.error("Critical Failure:", e);
+      setPhrases([{ question: "System offline. Please try again." }]);
     } finally {
       setLoading(false);
     }
@@ -80,150 +108,153 @@ export default function SpeakingModule() {
     return () => unsub();
   }, [router, fetchSpeakingData]);
 
-  const startSpeechRecognition = () => {
-    const WindowWithSpeech = window as unknown as {
-      SpeechRecognition: new () => ISpeechRecognition;
-      webkitSpeechRecognition: new () => ISpeechRecognition;
-    };
-    
-    const SpeechRecognition = WindowWithSpeech.SpeechRecognition || WindowWithSpeech.webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) return alert("Navegador no compatible.");
+  const startRecognition = () => {
+    const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    const recognition = new SpeechRecognition();
+    if (!SpeechRecognitionConstructor) {
+      alert("Browser does not support Speech Recognition.");
+      return;
+    }
+
+    const recognition = new SpeechRecognitionConstructor();
     recognition.lang = "en-US";
     recognition.continuous = false;
+    recognition.interimResults = false;
 
     recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: ISpeechRecognitionEvent) => {
+    
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const result = event.results[0][0].transcript;
       setTranscript(result);
     };
-    recognition.onend = () => setIsListening(false);
-    recognition.start();
-  };
 
-  const updateFirebaseProgress = async (finalPercentage: number) => {
-    if (!userUid) return;
-    try {
-      const progressRef = doc(db, "user_progress", userUid);
-      await setDoc(progressRef, {
-        modules: { speaking: finalPercentage },
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (e) { console.error(e); }
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.start();
   };
 
   const handleNext = async () => {
     const target = phrases[currentStep].question.toLowerCase().replace(/[.,!?]/g, "");
     const spoken = transcript.toLowerCase();
     
-    let currentScore = score;
-    if (spoken.length > target.length * 0.7) {
-      currentScore += 1;
-      setScore(currentScore);
+    if (spoken.includes(target.split(" ")[0])) { 
+        setScore(prev => prev + 1);
     }
 
     if (currentStep < phrases.length - 1) {
       setCurrentStep(prev => prev + 1);
       setTranscript("");
     } else {
-      const finalPercentage = Math.round((currentScore / phrases.length) * 100);
-      await updateFirebaseProgress(finalPercentage);
+      const finalScore = Math.round(((score + 1) / phrases.length) * 100);
+      await saveProgress(finalScore);
       setShowResult(true);
     }
   };
 
-  const playText = (text: string) => {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.8;
-    window.speechSynthesis.speak(utterance);
+  const saveProgress = async (finalPercentage: number) => {
+    if (!userUid) return;
+    try {
+      await setDoc(doc(db, "user_progress", userUid), {
+        modules: { speaking: finalPercentage },
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (e) { console.error("Cloud Sync Error", e); }
   };
 
-  if (loading || phrases.length === 0) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
-      <Image src="/logo2.png" alt="X" width={80} height={80} className="animate-pulse mb-4" />
-      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.4em]">Iniciando Protocolo...</p>
+  const playTTS = (text: string) => {
+    if (typeof window !== "undefined") {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = "en-US";
+      utt.rate = 0.9;
+      window.speechSynthesis.speak(utt);
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center">
+      <Loader2 className="animate-spin text-emerald-400 mb-4" size={40} />
+      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">Loading_Oral_Protocol</span>
     </div>
   );
 
-  if (showResult) {
-    const finalScore = Math.round((score / phrases.length) * 100);
-    return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 text-white">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-900/50 backdrop-blur-3xl border border-emerald-500/20 p-12 rounded-[50px] text-center max-w-md w-full shadow-2xl">
-          <Award className="mx-auto text-emerald-400 mb-6" size={80} />
-          <h2 className="text-5xl font-black italic uppercase mb-2">{finalScore}%</h2>
-          <div className="space-y-4 mt-10">
-            <button onClick={() => router.push("/modulos")} className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest">Regresar</button>
-            <button onClick={() => { setCurrentStep(0); setScore(0); setShowResult(false); setTranscript(""); }} className="flex items-center justify-center gap-2 w-full py-4 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">
-               <RotateCcw size={14} /> Reintentar
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#020617] text-white flex flex-col">
-      <style jsx global>{`::-webkit-scrollbar { display: none; }`}</style>
-      
-      <nav className="fixed top-0 w-full z-50 bg-[#020617]/90 backdrop-blur-xl border-b border-white/5 px-8 py-4 flex justify-between items-center">
-        <Link href="/modulos" className="p-2 hover:bg-white/5 rounded-lg transition-colors"><ArrowLeft size={22} /></Link>
-        <div className="bg-emerald-500/10 px-5 py-2 rounded-2xl border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-widest italic">
-           Paso {currentStep + 1} / {phrases.length}
+      <nav className="p-8 flex justify-between items-center bg-[#020617]/50 backdrop-blur-xl sticky top-0 z-50">
+        <Link href="/modulos" title="Back to Hub" className="p-3 hover:bg-white/5 rounded-2xl transition-all border border-white/5 text-slate-400 hover:text-white">
+          <ArrowLeft size={20} />
+        </Link>
+        <div className="px-6 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+           Step {currentStep + 1} of {phrases.length}
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 mt-16">
-        <div className="max-w-2xl w-full">
-          <motion.div key={currentStep} className="bg-slate-900/40 backdrop-blur-md border border-white/5 p-12 rounded-[50px] mb-10 text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500" />
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mb-6">Repite la frase:</p>
-            <h2 className="text-3xl font-black italic uppercase leading-tight text-white mb-8">
-              &quot;{phrases[currentStep].question}&quot;
+      <main className="flex-1 flex flex-col items-center justify-center p-6 max-w-3xl mx-auto w-full">
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={currentStep}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="w-full bg-slate-900/40 border border-white/5 p-12 rounded-[4rem] text-center shadow-2xl relative overflow-hidden mb-12"
+          >
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-sky-500" />
+            <h2 className="text-4xl font-black italic uppercase leading-tight mb-8">
+              &quot;{phrases[currentStep]?.question}&quot;
             </h2>
             <button 
-              aria-label="Escuchar frase"
-              onClick={() => playText(phrases[currentStep].question)} 
-              className="p-5 bg-emerald-500/10 rounded-full text-emerald-400 hover:bg-emerald-500 hover:text-[#020617] transition-all"
+              onClick={() => playTTS(phrases[currentStep]?.question || "")} 
+              title="Play Example"
+              className="p-6 bg-white/5 rounded-full text-emerald-400 hover:bg-emerald-400 hover:text-slate-900 transition-all"
             >
               <Volume2 size={32} />
             </button>
           </motion.div>
+        </AnimatePresence>
 
-          <div className="flex flex-col items-center gap-8">
-            <button 
-              aria-label={isListening ? "Detener grabación" : "Iniciar grabación"}
-              onClick={startSpeechRecognition}
-              className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${isListening ? "bg-red-500 animate-pulse" : "bg-emerald-500 shadow-xl shadow-emerald-500/20"}`}
-            >
-              {isListening ? <MicOff size={40} className="text-white" /> : <Mic size={40} className="text-[#020617]" />}
-            </button>
+        <div className="flex flex-col items-center gap-10 w-full">
+          <button 
+            onClick={startRecognition}
+            title={isListening ? "Stop Microphone" : "Start Microphone"}
+            className={`w-28 h-28 rounded-full flex items-center justify-center transition-all ${isListening ? "bg-red-500 animate-pulse shadow-[0_0_50px_rgba(239,68,68,0.4)]" : "bg-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.2)] hover:scale-105"}`}
+          >
+            {isListening ? <MicOff size={40} /> : <Mic size={40} className="text-[#020617]" />}
+          </button>
 
-            <div className="h-24 flex items-center justify-center text-center">
-              {transcript ? (
-                <p className="text-emerald-400 font-black italic text-xl uppercase tracking-tighter">
-                  &quot;{transcript}&quot;
-                </p>
-              ) : (
-                <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.3em]">Pulsa el micro para hablar</p>
-              )}
-            </div>
-
-            <button 
-              disabled={!transcript || isListening}
-              onClick={handleNext}
-              className="w-full max-w-xs py-6 bg-white text-[#020617] rounded-[30px] font-black uppercase text-[11px] tracking-[0.3em] disabled:opacity-20 hover:bg-emerald-400 transition-all flex items-center justify-center gap-3"
-            >
-              {currentStep === phrases.length - 1 ? "Finalizar" : "Siguiente"} <Send size={16} />
-            </button>
+          <div className="min-h-[4rem] text-center">
+            {transcript ? (
+              <p className="text-emerald-400 font-bold text-2xl uppercase italic tracking-tighter">
+                &quot;{transcript}&quot;
+              </p>
+            ) : (
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Tap microphone to begin speaking</p>
+            )}
           </div>
+
+          <button 
+            disabled={!transcript || isListening}
+            onClick={handleNext}
+            className="w-full py-6 bg-white text-slate-950 rounded-3xl font-black uppercase text-xs tracking-widest disabled:opacity-20 hover:bg-emerald-400 transition-all flex items-center justify-center gap-3"
+          >
+            {currentStep === phrases.length - 1 ? "Sync_Final_Results" : "Next_Phase"} <Send size={16} />
+          </button>
         </div>
       </main>
+
+      {showResult && (
+        <div className="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-6">
+          <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="bg-slate-900 border border-white/10 p-16 rounded-[4rem] text-center max-w-md w-full shadow-2xl">
+            <Award className="mx-auto text-emerald-400 mb-8" size={80} />
+            <div className="text-7xl font-black italic mb-4">{Math.round((score/phrases.length)*100)}%</div>
+            <p className="text-slate-400 uppercase text-[10px] font-black tracking-widest mb-12 italic">Speaking_Mastery_Level</p>
+            <button onClick={() => router.push("/modulos")} className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest">Return_to_Hub</button>
+            <button onClick={() => window.location.reload()} title="Retry Test" className="mt-4 text-slate-500 flex items-center justify-center gap-2 w-full text-[10px] font-black uppercase tracking-widest">
+              <RotateCcw size={14} /> Retry_Module
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

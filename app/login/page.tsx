@@ -1,18 +1,18 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-// Importaciones de Firebase
+
 import {
   AuthError,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   signInWithPopup
 } from "firebase/auth";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Facebook, Loader2, Lock, Mail } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { auth } from "../src/firebase/config";
 
 export default function LoginPage() {
@@ -72,30 +72,66 @@ export default function LoginPage() {
         transition={{ duration: 0.4 }}
         className="relative w-full max-w-[850px] bg-white shadow-2xl shadow-blue-900/10 rounded-[2.5rem] grid grid-cols-1 md:grid-cols-2 overflow-hidden border border-slate-100"
       >
-        {/* PANEL IZQUIERDO: Branding Principal */}
-        <div className="hidden md:flex flex-col items-center justify-center bg-[#0f172a] p-12 text-white relative overflow-hidden">
-          <div className="relative z-10 text-center">
+        {/* PANEL IZQUIERDO: Branding y Redes Sociales */}
+        <div className="hidden md:flex flex-col items-center justify-between bg-[#0f172a] p-12 text-white relative overflow-hidden">
+          
+          {/* Logo Principal - AHORA MÁS ANCHO */}
+          <div className="relative z-10 text-center w-full flex flex-col items-center justify-center">
             <motion.div
-              animate={{ y: [0, -12, 0] }}
+              className="w-full flex justify-center"
+              animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
             >
               <Image 
                 src="/logo.png" 
                 alt="Main Logo" 
-                width={220} 
-                height={60} 
-                className="mx-auto mb-8 drop-shadow-[0_0_15px_rgba(135,206,235,0.3)]" 
+                width={320} // Aumentado para que sea más ancho
+                height={80} 
+                priority
+                style={{ objectFit: 'contain' }}
+                className="drop-shadow-[0_0_20px_rgba(135,206,235,0.4)] mb-4" 
               />
             </motion.div>
-            <h2 className="text-xl font-black uppercase tracking-[0.3em] italic mb-2 text-[#87CEEB]">
-              
-            </h2>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
-            Tu mejor aliado para triunfar .
+            <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.3em] italic">
+              Tu mejor aliado para triunfar.
             </p>
           </div>
+
+          {/* SECCIÓN DE REDES SOCIALES */}
+          <div className="relative z-10 w-full">
+            <div className="flex items-center gap-3 mb-6 justify-center">
+              <div className="h-[1px] w-8 bg-white/10" />
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-cyan-400">Social_Connect</span>
+              <div className="h-[1px] w-8 bg-white/10" />
+            </div>
+            
+            <div className="flex justify-center gap-8">
+              <a 
+                href="https://www.facebook.com/share/14UxhLcNhg8/" 
+                target="_blank" 
+                className="group flex flex-col items-center gap-3"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center transition-all group-hover:bg-[#1877F2] group-hover:border-[#1877F2] group-hover:shadow-[0_0_25px_rgba(24,119,242,0.5)] group-hover:-translate-y-2">
+                  <Facebook size={26} className="text-slate-300 group-hover:text-white" />
+                </div>
+                <span className="text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Facebook</span>
+              </a>
+
+              <a 
+                href="https://www.tiktok.com/@x_learningonline?_r=1&_" 
+                target="_blank" 
+                className="group flex flex-col items-center gap-3"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center transition-all group-hover:bg-white group-hover:border-white group-hover:shadow-[0_0_25px_rgba(255,255,255,0.2)] group-hover:-translate-y-2">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-slate-300 group-hover:text-black">
+                    <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.06-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.03 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-1.13-.31-2.34-.25-3.41.33-.71.38-1.27 1.03-1.57 1.77-.3.72-.38 1.52-.22 2.29.17.82.61 1.59 1.25 2.11.85.73 2.01.99 3.09.73 1.18-.24 2.19-1.03 2.67-2.1.23-.52.33-1.1.33-1.67-.01-4.71-.01-9.42-.01-14.13z"/>
+                  </svg>
+                </div>
+                <span className="text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">TikTok</span>
+              </a>
+            </div>
+          </div>
           
-          {/* Logo decorativo de fondo */}
           <div className="absolute bottom-[-20px] right-[-20px] opacity-10 pointer-events-none">
              <Image src="/logo2.png" alt="Decoration" width={200} height={200} />
           </div>
@@ -104,9 +140,9 @@ export default function LoginPage() {
 
         {/* PANEL DERECHO: Formulario */}
         <div className="px-10 py-12 flex flex-col justify-center bg-white relative">
-          {/* Logo pequeño para móviles */}
+          {/* ... resto del código del panel derecho igual ... */}
           <div className="md:hidden flex justify-center mb-8">
-            <Image src="/logo.png" alt="Logo Mobile" width={150} height={40} />
+            <Image src="/logo.png" alt="Logo Mobile" width={180} height={50} />
           </div>
 
           <div className="mb-8">
@@ -196,7 +232,7 @@ export default function LoginPage() {
   );
 }
 
-// Icono pequeño que faltaba para el botón
+
 function Send({ size, className }: { size: number; className?: string }) {
   return (
     <svg 

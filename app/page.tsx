@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Award,
   BookOpen,
+  Facebook,
   Globe,
   LogIn,
   Shield,
@@ -22,7 +23,6 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-[100] bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            {/* Logo Principal con Brillo sutil */}
             <Image 
               src="/logo.png" 
               alt="X-Learning Online Logo" 
@@ -54,7 +54,6 @@ export default function LandingPage() {
 
       {/* --- HERO SECTION --- */}
       <header className="relative pt-44 pb-20 px-6 overflow-hidden">
-        {/* Logo2 (la X) con Brillo Azul Neón de fondo */}
         <div className="absolute top-20 right-[-10%] opacity-20 pointer-events-none -z-10 rotate-12 blur-[2px]">
           <Image 
             src="/logo2.png" 
@@ -94,7 +93,6 @@ export default function LandingPage() {
       {/* --- QUIÉNES SOMOS SECTION --- */}
       <section className="py-24 px-6 bg-[#070c1b]/50 border-y border-white/5 relative overflow-hidden">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-          
           <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} className="space-y-8">
             <div className="flex items-center gap-4 mb-4">
                <Image 
@@ -105,7 +103,7 @@ export default function LandingPage() {
                  className="drop-shadow-[0_0_10px_rgba(6,182,212,0.6)]"
                />
                <h2 className="text-4xl font-black text-white italic uppercase tracking-tight leading-tight">
-                Un Enfoque <span className="text-cyan-500">Disruptivo</span>
+                 Un Enfoque <span className="text-cyan-500">Disruptivo</span>
               </h2>
             </div>
             <p className="text-slate-400 text-lg leading-relaxed">
@@ -129,7 +127,6 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* GLOBAL PRESENCE & STATS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="p-8 rounded-[32px] bg-cyan-500 border border-cyan-400 flex flex-col justify-center text-[#020617] shadow-[0_0_30px_rgba(6,182,212,0.3)]">
               <Globe size={40} className="mb-4 opacity-80" />
@@ -152,28 +149,67 @@ export default function LandingPage() {
                 Innovación Educativa 2026
               </p>
             </div>
-            
-            <div className="sm:col-span-2 p-10 rounded-[32px] bg-gradient-to-br from-slate-900 to-black border border-white/10 relative overflow-hidden group">
-              <div className="relative z-10">
-                <h4 className="text-white font-black italic uppercase text-2xl mb-2">Misión Institucional</h4>
-                <p className="text-slate-500 text-sm leading-relaxed max-w-md">
-                  Formar personas bilingües altamente competitivas para integrarse con éxito en el ámbito laboral y social.
-                </p>
-              </div>
-              <div className="absolute -bottom-10 -right-10 opacity-20 transition-transform group-hover:scale-110">
-                {/* Logo original en el fondo con su color */}
-                <Image src="/logo.png" alt="Logo Background" width={300} height={100} />
-              </div>
-            </div>
           </div>
+        </div>
+      </section>
 
+      {/* --- SOCIAL MEDIA SECTION (Acomodada fuera del footer para que luzca) --- */}
+      <section className="py-24 px-6 bg-gradient-to-b from-transparent to-[#070c1b]">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            className="inline-block mb-6 px-6 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20"
+          >
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-cyan-400">Comunidad Oficial</span>
+          </motion.div>
+          
+          <h2 className="text-4xl md:text-5xl font-black text-white italic uppercase mb-4 tracking-tighter">
+            ¡Visítanos en nuestras <span className="text-cyan-500">redes sociales!</span>
+          </h2>
+          <p className="text-slate-500 mb-16 font-bold uppercase tracking-widest text-xs">
+            Únete a la revolución bilingüe de X-Learning ONline
+          </p>
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+            {/* Facebook Card */}
+            <a 
+              href="https://www.facebook.com/share/14UxhLcNhg8/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group relative w-full max-w-sm p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-blue-500/50 hover:shadow-[0_0_40px_rgba(59,130,246,0.15)]"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 rounded-3xl bg-blue-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-600/30 group-hover:scale-110 transition-transform">
+                  <Facebook size={32} className="text-white" />
+                </div>
+                <span className="text-white font-black italic uppercase text-2xl tracking-tighter">Facebook</span>
+                <span className="text-blue-500 text-[10px] font-black uppercase mt-2 tracking-widest">@x_learningonline</span>
+              </div>
+            </a>
+
+            {/* TikTok Card */}
+            <a 
+              href="https://www.tiktok.com/@x_learningonline?_r=1&_" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group relative w-full max-w-sm p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-white/20 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 rounded-3xl bg-white flex items-center justify-center mb-6 shadow-xl shadow-white/10 group-hover:scale-110 transition-transform">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="black"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.06-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.03 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-1.13-.31-2.34-.25-3.41.33-.71.38-1.27 1.03-1.57 1.77-.3.72-.38 1.52-.22 2.29.17.82.61 1.59 1.25 2.11.85.73 2.01.99 3.09.73 1.18-.24 2.19-1.03 2.67-2.1.23-.52.33-1.1.33-1.67-.01-4.71-.01-9.42-.01-14.13z"/></svg>
+                </div>
+                <span className="text-white font-black italic uppercase text-2xl tracking-tighter">TikTok</span>
+                <span className="text-slate-400 text-[10px] font-black uppercase mt-2 tracking-widest">@x_learningonline</span>
+              </div>
+            </a>
+          </div>
         </div>
       </section>
 
       {/* --- FOOTER --- */}
-      <footer className="py-12 border-t border-white/5 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-center">
-          {/* Logo en su color original */}
+      <footer className="py-12 border-t border-white/5 px-6 bg-[#020617]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <Image 
             src="/logo.png" 
             alt="X-Learning Online" 
