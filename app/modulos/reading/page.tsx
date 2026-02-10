@@ -39,14 +39,13 @@ export default function ReadingModule() {
       const snap = await getDoc(progressRef);
       const levelToUse = snap.exists() ? snap.data().currentLevel : "A1";
 
-      // LLAMADA A TU BACKEND DE PYTHON (Vía el proxy de Next o directa si configuraste CORS)
-      const res = await fetch("http://127.0.0.1:8000/generate-questions", {
+      // Asegúrate de que esta URL coincida con tu main.py
+      const res = await fetch("http://127.0.0.1:8000/api/v1/generate-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           type: "reading", 
-          level: levelToUse,
-          count: 10 // Le pasamos al back que queremos 10
+          level: levelToUse 
         })
       });
       
@@ -79,6 +78,7 @@ export default function ReadingModule() {
         modules: { reading: finalScore },
         updatedAt: new Date().toISOString()
       }, { merge: true });
+      console.log("Progreso guardado:", finalScore);
     } catch (error) {
       console.error("Error saving progress:", error);
     }
@@ -86,16 +86,21 @@ export default function ReadingModule() {
 
   const handleNext = async () => {
     if (selectedAnswer === null || !data) return;
+
     const isCorrect = data.questions[currentQuestion].options[selectedAnswer] === data.questions[currentQuestion].correctAnswer;
-    const newCorrectCount = isCorrect ? correctCount + 1 : correctCount;
     
-    if (isCorrect) setCorrectCount(newCorrectCount);
+    // Usamos una constante local para el cálculo inmediato del score
+    const updatedCorrectCount = isCorrect ? correctCount + 1 : correctCount;
+    
+    if (isCorrect) {
+      setCorrectCount(prev => prev + 1);
+    }
 
     if (currentQuestion < data.questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
       setSelectedAnswer(null);
     } else {
-      const finalPercentage = Math.round((newCorrectCount / data.questions.length) * 100);
+      const finalPercentage = Math.round((updatedCorrectCount / data.questions.length) * 100);
       await updateFirebaseProgress(finalPercentage);
       setShowResult(true);
     }
@@ -103,14 +108,13 @@ export default function ReadingModule() {
 
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
-      <style jsx global>{`::-webkit-scrollbar { display: none; }`}</style>
       <Image src="/logo2.png" alt="X" width={80} height={80} className="animate-pulse mb-4" />
       <p className="text-cyan-400 text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">Iniciando Protocolo Reading...</p>
     </div>
   );
 
   if (showResult || !data) {
-    const score = Math.round((correctCount / (data?.questions.length || 10)) * 100);
+    const score = data ? Math.round((correctCount / data.questions.length) * 100) : 0;
     return (
       <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0f172a]/80 backdrop-blur-2xl border border-cyan-500/20 p-12 rounded-[50px] text-center max-w-md w-full shadow-2xl">
@@ -130,43 +134,56 @@ export default function ReadingModule() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 overflow-hidden">
-      <style jsx global>{`
-        section::-webkit-scrollbar { display: none; }
-        section { -ms-overflow-style: none; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-      `}</style>
-
       <nav className="fixed top-0 w-full z-50 bg-[#020617]/90 backdrop-blur-xl border-b border-white/5 px-8 py-4 flex justify-between items-center">
         <Link href="/modulos" className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white"><ArrowLeft size={22} /></Link>
-        <div className="bg-cyan-500/10 px-5 py-2 rounded-2xl border border-cyan-500/30 text-[10px] font-black text-cyan-400 uppercase tracking-widest italic shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-            Step {currentQuestion + 1} / {data.questions.length}
+        <div className="bg-cyan-500/10 px-5 py-2 rounded-2xl border border-cyan-500/30 text-[10px] font-black text-cyan-400 uppercase tracking-widest italic shadow-[0_0_15_px_rgba(6,182,212,0.1)]">
+            Step {currentQuestion + 1} / {data?.questions?.length || 0}
         </div>
       </nav>
 
       <main className="pt-24 h-screen grid grid-cols-1 lg:grid-cols-2">
         <section className="p-10 lg:p-20 overflow-y-auto">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <h1 className="text-5xl font-black text-white italic uppercase mb-10 tracking-tighter leading-none border-l-4 border-cyan-500 pl-6">{data.title}</h1>
-            <div className="text-xl leading-[1.8] text-slate-400 font-medium whitespace-pre-wrap">{data.passage}</div>
+            <h1 className="text-5xl font-black text-white italic uppercase mb-10 tracking-tighter leading-none border-l-4 border-cyan-500 pl-6">
+              {data?.title || "Reading Task"}
+            </h1>
+            <div className="text-xl leading-[1.8] text-slate-400 font-medium whitespace-pre-wrap">
+              {data?.passage}
+            </div>
           </motion.div>
         </section>
 
         <section className="p-10 lg:p-20 bg-[#070c1b]/60 backdrop-blur-md overflow-y-auto border-l border-white/5 relative">
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-black text-white mb-10 italic uppercase leading-tight tracking-tight">{data.questions[currentQuestion].question}</h2>
+            {/* PROTECCIÓN CONTRA UNDEFINED AQUÍ */}
+            <h2 className="text-2xl font-black text-white mb-10 italic uppercase leading-tight tracking-tight">
+              {data?.questions?.[currentQuestion]?.question || "Cargando pregunta..."}
+            </h2>
+            
             <div className="space-y-4">
-              {data.questions[currentQuestion].options.map((opt, i) => (
-                <button key={i} onClick={() => setSelectedAnswer(i)} className={`w-full p-6 rounded-[30px] border-2 text-left flex items-center gap-4 transition-all duration-300 ${selectedAnswer === i ? "border-cyan-500 bg-cyan-500/5 shadow-[0_0_25px_rgba(6,182,212,0.15)] scale-[1.02]" : "border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/60"}`}>
+              {data?.questions?.[currentQuestion]?.options?.map((opt, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => setSelectedAnswer(i)} 
+                  className={`w-full p-6 rounded-[30px] border-2 text-left flex items-center gap-4 transition-all duration-300 ${selectedAnswer === i ? "border-cyan-500 bg-cyan-500/5 shadow-[0_0_25px_rgba(6,182,212,0.15)] scale-[1.02]" : "border-white/5 bg-slate-900/40 hover:border-white/10 hover:bg-slate-900/60"}`}
+                >
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${selectedAnswer === i ? "bg-cyan-500 border-cyan-500" : "border-slate-700"}`}>
                     {selectedAnswer === i && <CheckCircle2 size={14} className="text-[#020617] stroke-[3]" />}
                   </div>
-                  <span className={`font-bold uppercase text-sm tracking-tight ${selectedAnswer === i ? "text-white" : "text-slate-500"}`}>{opt}</span>
+                  <span className={`font-bold uppercase text-sm tracking-tight ${selectedAnswer === i ? "text-white" : "text-slate-500"}`}>
+                    {opt}
+                  </span>
                 </button>
               ))}
             </div>
             
-            <button disabled={selectedAnswer === null} onClick={handleNext} className="w-full mt-12 py-6 bg-white text-[#020617] rounded-[30px] font-black uppercase text-[11px] tracking-[0.3em] disabled:opacity-20 hover:bg-cyan-400 transition-all shadow-2xl flex items-center justify-center gap-3">
-              {currentQuestion === data.questions.length - 1 ? "Analizar Protocolo" : "Siguiente Pregunta"} <Send size={16} />
+            <button 
+              disabled={selectedAnswer === null || !data} 
+              onClick={handleNext} 
+              className="w-full mt-12 py-6 bg-white text-[#020617] rounded-[30px] font-black uppercase text-[11px] tracking-[0.3em] disabled:opacity-20 hover:bg-cyan-400 transition-all shadow-2xl flex items-center justify-center gap-3"
+            >
+              {currentQuestion === (data?.questions?.length || 1) - 1 ? "Analizar Protocolo" : "Siguiente Pregunta"} 
+              <Send size={16} />
             </button>
           </div>
         </section>
