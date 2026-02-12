@@ -1,8 +1,15 @@
 "use client";
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, FileText, Loader2, PenTool, RotateCcw, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Send,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -26,28 +33,40 @@ export default function ProfessionalWritingPage() {
 
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
 
-  // 1. Obtener el prompt inicial según el nivel del usuario
+  // --- OBTENER TEMA DESDE EL BACKEND ---
   const fetchPrompt = useCallback(async (level: string) => {
     try {
       setFetchingPrompt(true);
-      const res = await fetch("http://127.0.0.1:8000/api/v1/generate-questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "writing", level })
-      });
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/v1/generate-questions",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "writing",
+            level: level || "A1",
+          }),
+        },
+      );
+
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
-      // Usamos passage o title dependiendo de qué regrese la IA
-      setPrompt(data.passage || data.title || "Write about your professional goals.");
+
+      // Ajuste para coincidir con el JSON que devuelve tu main.py {title, passage}
+      setPrompt(
+        data.passage ||
+          data.title ||
+          "Write about your daily professional routine.",
+      );
     } catch (e) {
       console.error("Critical: Error fetching prompt", e);
-      setPrompt("Describe the impact of artificial intelligence in modern education.");
+      setPrompt("Describe the benefits of teamwork in a global company.");
     } finally {
       setFetchingPrompt(false);
     }
   }, []);
 
-  // 2. Efecto inicial para autenticación y nivel
+  // --- CARGA INICIAL Y NIVEL ---
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -55,8 +74,9 @@ export default function ProfessionalWritingPage() {
         try {
           const snap = await getDoc(doc(db, "user_progress", user.uid));
           const level = snap.exists() ? snap.data().currentLevel : "A1";
-          setSelectedLevel(level);
-          fetchPrompt(level);
+          const levelToUse = level || "A1";
+          setSelectedLevel(levelToUse);
+          fetchPrompt(levelToUse);
         } catch (err) {
           console.error("Firebase Init Error", err);
           fetchPrompt("A1");
@@ -68,66 +88,132 @@ export default function ProfessionalWritingPage() {
     return () => unsub();
   }, [fetchPrompt, router]);
 
-  // 3. Enviar el ensayo para calificar
+  // --- GUARDADO EN FIREBASE (ESTRUCTURA DE NIVELES) ---
+  const updateFirebaseProgress = async (finalScore: number) => {
+    if (!userUid) return;
+    try {
+      const progressRef = doc(db, "user_progress", userUid);
+      const snap = await getDoc(progressRef);
+      const currentData = snap.data() || {};
+
+      // Accedemos dinámicamente: modules_A1, modules_A2, etc.
+      const levelKey = `modules_${selectedLevel}`;
+      const currentStats = currentData[levelKey] || {
+        reading: 0,
+        listening: 0,
+        writing: 0,
+        speaking: 0,
+      };
+
+      const newStats = { ...currentStats, writing: finalScore };
+
+      // Cálculo del promedio para este nivel específico
+      const avg = Math.round(
+        ((newStats.reading || 0) +
+          (newStats.listening || 0) +
+          (newStats.writing || 0) +
+          (newStats.speaking || 0)) /
+          4,
+      );
+
+      await updateDoc(progressRef, {
+        [levelKey]: newStats,
+        [`progress_${selectedLevel}`]: avg,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error saving writing progress:", error);
+    }
+  };
+
+  // --- ENVIAR A EVALUAR (IA) ---
   const handleSubmit = async () => {
-    if (wordCount < 10) return alert("Your composition is too short. Please add more detail.");
-    
+    if (wordCount < 10)
+      return alert(
+        "Tu composición es muy corta. Por favor, añade más detalle.",
+      );
+
     setLoading(true);
     try {
       if (!userUid) throw new Error("Session expired");
 
-      const response = await fetch("http://127.0.0.1:8000/api/v1/grade-writing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          content: text, 
-          level: selectedLevel,
-          prompt: prompt
-        }),
-      });
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/v1/grade-writing",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: text,
+            level: selectedLevel,
+            prompt: prompt,
+          }),
+        },
+      );
 
-      if (!response.ok) throw new Error("Evaluation failed");
+      if (!response.ok) {
+        const errorDetail = await response.json();
+        console.error("FastAPI Error Detail:", errorDetail);
+        throw new Error("Evaluation failed");
+      }
 
-      const data = await response.json(); 
+      const data = await response.json();
+
       const evaluation: EvaluationResult = {
-        score: typeof data.score === 'number' ? data.score : 0,
-        feedback: data.feedback || "Submission processed successfully."
+        score: Number(data.score) || 0,
+        feedback: data.feedback || "Good effort! Keep practicing your grammar.",
       };
 
       setResult(evaluation);
-
-      // Guardar el progreso en Firebase
-      const progressRef = doc(db, "user_progress", userUid);
-      await setDoc(progressRef, {
-        modules: { writing: evaluation.score },
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-
+      await updateFirebaseProgress(evaluation.score);
       setShowModal(true);
     } catch (error) {
       console.error("Submission Error:", error);
-      alert("System sync failed. Please check your connection.");
+      alert(
+        "Hubo un error con la evaluación. Revisa que el servidor FastAPI esté corriendo.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRetry = () => {
+    setText("");
+    setResult(null);
+    setShowModal(false);
+    fetchPrompt(selectedLevel);
+  };
+
+  if (fetchingPrompt && !userUid)
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
+        <Loader2 className="animate-spin text-emerald-500 mb-4" size={40} />
+        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.5em]">
+          Cargando Lab de Escritura...
+        </p>
+      </div>
+    );
+
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 selection:bg-sky-500/30">
-      <header className="sticky top-0 z-50 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-8 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#020617] text-slate-100 selection:bg-emerald-500/30 font-sans">
+      <header className="sticky top-0 z-50 bg-[#020617]/90 backdrop-blur-xl border-b border-white/5 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/modulos" className="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-xl border border-white/5">
+          <Link
+            href="/modulos"
+            className="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-xl border border-white/5"
+            aria-label="Volver a módulos"
+          >
             <ArrowLeft size={20} />
           </Link>
-          
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-emerald-400 rounded-lg flex items-center justify-center font-black text-slate-900 text-xl shadow-[0_0_15px_rgba(56,189,248,0.3)]">
-              C
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-lg flex items-center justify-center font-black text-[#020617] text-xl shadow-[0_0_15px_rgba(52,211,153,0.3)]">
+              W
             </div>
             <div>
-              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-sky-400 block leading-none mb-1">Certifica_AI</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 block leading-none mb-1">
+                Certifica_AI
+              </span>
               <h1 className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-white">
-                <PenTool size={14} className="text-emerald-400" /> WRITING_LAB
+                WRITING_LAB
               </h1>
             </div>
           </div>
@@ -135,73 +221,79 @@ export default function ProfessionalWritingPage() {
 
         <div className="flex gap-4 items-center">
           <div className="hidden md:flex flex-col items-end mr-4">
-             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Active_Level</span>
-             <span className="text-xs font-bold text-sky-400 uppercase italic">{selectedLevel}</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+              Target_Level
+            </span>
+            <span className="text-xs font-bold text-emerald-400 uppercase italic">
+              {selectedLevel}
+            </span>
           </div>
-          <button 
+          <button
             onClick={handleSubmit}
             disabled={loading || fetchingPrompt || text.length < 5}
-            className="px-8 py-3 bg-white hover:bg-sky-400 text-slate-950 text-[11px] font-black uppercase tracking-widest rounded-full shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
+            className="px-8 py-3 bg-white hover:bg-emerald-400 text-[#020617] text-[11px] font-black uppercase tracking-widest rounded-full transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
           >
-            {loading ? <Loader2 className="animate-spin" size={14} /> : "Submit_Work"}
+            {loading ? (
+              <Loader2 className="animate-spin" size={14} />
+            ) : (
+              <>
+                Analizar_Texto <Send size={14} />
+              </>
+            )}
           </button>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-4 space-y-6">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-white/5 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Sparkles size={60} className="text-sky-400" />
-            </div>
-            <h3 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> IA_Instruction
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden shadow-2xl"
+          >
+            <h3 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2 italic">
+              Neural_Prompt
             </h3>
-            
-            {fetchingPrompt ? (
-              <div className="space-y-4 animate-pulse">
-                <div className="h-4 bg-white/5 rounded-full w-full" />
-                <div className="h-4 bg-white/5 rounded-full w-3/4" />
-              </div>
-            ) : (
-              <p className="text-2xl font-black leading-[1.2] text-white italic tracking-tight">
-                &quot;{prompt}&quot;
-              </p>
-            )}
-
-            <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                Target: Academic Depth
-              </span>
-              <button onClick={() => fetchPrompt(selectedLevel)} className="p-2 text-slate-400 hover:text-sky-400 transition-colors" title="Reload Prompt">
-                <RotateCcw size={16} />
-              </button>
-            </div>
+            <p className="text-2xl font-black leading-tight text-white italic tracking-tight mb-8">
+              &quot;{prompt}&quot;
+            </p>
+            <button
+              onClick={() => fetchPrompt(selectedLevel)}
+              title="Cambiar tema"
+              aria-label="Recargar nuevo prompt"
+              className="p-2 text-slate-400 hover:text-emerald-400 transition-colors bg-white/5 rounded-lg border border-white/5"
+            >
+              <RotateCcw size={16} />
+            </button>
           </motion.div>
 
-          <div className="bg-sky-500/5 p-6 rounded-3xl border border-sky-500/10 text-center">
-             <span className="text-[9px] font-black text-sky-400 uppercase tracking-widest block mb-1">Metrics: Word_Count</span>
-             <span className="text-5xl font-black text-white italic">{wordCount}</span>
+          <div className="bg-emerald-500/5 p-8 rounded-3xl border border-emerald-500/10 text-center">
+            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-1">
+              Palabras
+            </span>
+            <span className="text-6xl font-black text-white italic">
+              {wordCount}
+            </span>
           </div>
         </div>
 
         <div className="lg:col-span-8">
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900/40 rounded-[3rem] shadow-2xl border border-white/5 overflow-hidden min-h-[600px] flex flex-col focus-within:border-sky-500/30 transition-all border-b-sky-500/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900/40 rounded-[3rem] border border-white/5 overflow-hidden min-h-[600px] flex flex-col focus-within:border-emerald-500/30 transition-all shadow-3xl"
+          >
             <div className="px-10 py-5 bg-white/5 border-b border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black tracking-widest uppercase italic">
-                  <FileText size={14} className="text-sky-400" /> Neural_Editor_v1.0
-                </div>
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500/50" />
-                  <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                </div>
+              <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black tracking-widest uppercase italic">
+                <FileText size={14} className="text-emerald-400" />{" "}
+                Professional_Editor_v2.0
+              </div>
             </div>
-            <textarea 
-              value={text} 
+            <textarea
+              value={text}
               onChange={(e) => setText(e.target.value)}
-              className="flex-1 w-full p-12 text-xl leading-relaxed text-white outline-none resize-none placeholder:text-slate-700 font-medium bg-transparent"
-              placeholder="Escribe aquí tu respuesta profesional..."
+              className="flex-1 w-full p-12 text-xl leading-relaxed text-white outline-none resize-none bg-transparent custom-scrollbar font-medium"
+              placeholder="Escribe tu respuesta aquí..."
             />
           </motion.div>
         </div>
@@ -209,25 +301,41 @@ export default function ProfessionalWritingPage() {
 
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/95 backdrop-blur-2xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900 border border-white/10 rounded-[4rem] p-12 max-w-xl w-full shadow-3xl text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-sky-500 via-emerald-400 to-sky-500" />
-              <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/95 backdrop-blur-2xl">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-[#0f172a] border border-emerald-500/20 rounded-[4rem] p-12 max-w-xl w-full text-center relative shadow-3xl"
+            >
+              <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20">
                 <CheckCircle2 size={40} />
               </div>
-              <h2 className="text-[10px] font-black text-sky-400 uppercase tracking-[0.5em] mb-4 italic">Performance_Analysis</h2>
-              <div className="text-8xl font-black text-white italic mb-8 tracking-tighter">
-                {result?.score}<span className="text-3xl text-emerald-400 font-black">%</span>
+              <h2 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.5em] mb-4 italic">
+                Writing_Analysis_Score
+              </h2>
+              <div className="text-8xl font-black text-white italic tracking-tighter mb-8">
+                {result?.score}
+                <span className="text-3xl text-emerald-400">%</span>
               </div>
-              <div className="bg-white/5 p-8 rounded-3xl text-left border border-white/5 mb-10 max-h-48 overflow-y-auto custom-scrollbar">
-                 <p className="text-sm text-slate-300 leading-relaxed font-medium italic">&quot;{result?.feedback}&quot;</p>
+              <div className="bg-white/5 p-8 rounded-3xl text-left border border-white/5 mb-10 max-h-48 overflow-y-auto">
+                <p className="text-sm text-slate-300 leading-relaxed italic">
+                  &quot;{result?.feedback}&quot;
+                </p>
               </div>
-              <button 
-                onClick={() => router.push("/results")} 
-                className="w-full py-6 bg-white text-slate-950 rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:bg-sky-400 transition-all active:scale-95"
-              >
-                Sync_Results_&_Continue
-              </button>
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={handleRetry}
+                  className="w-full py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Intentar nuevo tema
+                </button>
+                <button
+                  onClick={() => router.push("/modulos")}
+                  className="w-full py-6 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-transform"
+                >
+                  Finalizar y Volver
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

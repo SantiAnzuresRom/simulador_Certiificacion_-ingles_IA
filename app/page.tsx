@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Award,
@@ -14,8 +14,29 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function LandingPage() {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const features = [
+    { 
+      text: "Método 100% hablado y dinámico", 
+      icon: Zap,
+      desc: "Olvida las clases aburridas. Aquí interactúas en tiempo real con situaciones reales desde el primer segundo de entrenamiento." 
+    },
+    { 
+      text: "Sin libros ni memorización innecesaria", 
+      icon: BookOpen,
+      desc: "Aprendizaje orgánico basado en la neurociencia: adquirimos el idioma como aprendiste a hablar de niño, sin gramática tediosa." 
+    },
+    { 
+      text: "Certificaciones nacionales e internacionales", 
+      icon: Award,
+      desc: "Preparamos tu perfil para obtener certificaciones oficiales que validen tu talento en cualquier empresa global." 
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-cyan-500/30">
       
@@ -79,7 +100,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="max-w-2xl mx-auto text-slate-400 text-lg md:text-xl mb-12 leading-relaxed">
-            X-Learning ONline es una microempresa dedicada a que aprendas de forma rápida, eliminando el método convencional de libros y gramática.
+            X-Learning Online es una microempresa dedicada a que aprendas de forma rápida, eliminando el método convencional de libros y gramática.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -112,16 +133,35 @@ export default function LandingPage() {
             </p>
             
             <div className="space-y-4">
-              {[
-                { text: "Método 100% hablado y dinámico", icon: Zap },
-                { text: "Sin libros ni memorización innecesaria", icon: BookOpen },
-                { text: "Certificaciones nacionales e internacionales", icon: Award }
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-[#0f172a] border border-white/5 hover:border-cyan-500/30 transition-colors shadow-inner">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                    <item.icon className="text-cyan-400" size={20} />
+              {features.map((item, idx) => (
+                <div 
+                  key={idx} 
+                  className="relative"
+                  onMouseEnter={() => setHoveredIndex(idx)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                >
+                  <AnimatePresence>
+                    {hoveredIndex === idx && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: -10, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute bottom-full left-0 mb-4 z-50 w-72 p-5 bg-[#132448] border border-cyan-500/30 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                      >
+                        <p className="text-xs font-medium text-cyan-100 leading-relaxed italic">
+                          {item.desc}
+                        </p>
+                        <div className="absolute top-[100%] left-6 w-4 h-4 bg-[#132448] border-r border-b border-cyan-500/30 rotate-45 translate-y-2" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0f172a] border border-white/5 hover:border-cyan-500/30 transition-all cursor-help shadow-inner group">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:bg-cyan-500 transition-colors">
+                      <item.icon className="text-cyan-400 group-hover:text-[#020617]" size={20} />
+                    </div>
+                    <span className="text-sm font-bold text-slate-200 uppercase tracking-tight group-hover:text-white">{item.text}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-200 uppercase tracking-tight">{item.text}</span>
                 </div>
               ))}
             </div>
@@ -153,7 +193,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* --- SOCIAL MEDIA SECTION (Acomodada fuera del footer para que luzca) --- */}
+      {/* --- SOCIAL MEDIA SECTION --- */}
       <section className="py-24 px-6 bg-gradient-to-b from-transparent to-[#070c1b]">
         <div className="max-w-7xl mx-auto text-center">
           <motion.div 
@@ -168,16 +208,16 @@ export default function LandingPage() {
             ¡Visítanos en nuestras <span className="text-cyan-500">redes sociales!</span>
           </h2>
           <p className="text-slate-500 mb-16 font-bold uppercase tracking-widest text-xs">
-            Únete a la revolución bilingüe de X-Learning ONline
+            Únete a la revolución bilingüe de X-Learning Online
           </p>
 
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* Facebook Card */}
             <a 
               href="https://www.facebook.com/share/14UxhLcNhg8/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group relative w-full max-w-sm p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-blue-500/50 hover:shadow-[0_0_40px_rgba(59,130,246,0.15)]"
+              className="group relative p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-blue-500/50 hover:shadow-[0_0_40px_rgba(59,130,246,0.15)]"
             >
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 rounded-3xl bg-blue-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-600/30 group-hover:scale-110 transition-transform">
@@ -188,12 +228,30 @@ export default function LandingPage() {
               </div>
             </a>
 
+            {/* WhatsApp Card */}
+            <a 
+              href="https://wa.me/message/TU_LINK_AQUI" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group relative p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-emerald-500/50 hover:shadow-[0_0_40px_rgba(16,185,129,0.15)]"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-500 flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.12.553 4.189 1.606 6.011L0 24l6.117-1.605a11.803 11.803 0 005.925 1.597h.005c6.632 0 12.031-5.391 12.035-12.027a11.799 11.799 0 00-3.53-8.508z"/>
+                  </svg>
+                </div>
+                <span className="text-white font-black italic uppercase text-2xl tracking-tighter">WhatsApp</span>
+                <span className="text-emerald-500 text-[10px] font-black uppercase mt-2 tracking-widest">Soporte Directo</span>
+              </div>
+            </a>
+
             {/* TikTok Card */}
             <a 
               href="https://www.tiktok.com/@x_learningonline?_r=1&_" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group relative w-full max-w-sm p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-white/20 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+              className="group relative p-10 rounded-[40px] bg-[#0f172a] border border-white/5 transition-all hover:border-white/20 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
             >
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 rounded-3xl bg-white flex items-center justify-center mb-6 shadow-xl shadow-white/10 group-hover:scale-110 transition-transform">

@@ -1,96 +1,61 @@
 "use client";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   Award,
+  LayoutGrid,
   Loader2,
   Mic,
   MicOff,
   RotateCcw,
   Send,
+  Sparkles,
   Volume2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { auth, db } from "../../src/firebase/config";
-
-// --- 1. DEFINICIÓN DE TIPOS REALES (Sin 'any') ---
-// Esto mata el error "Unexpected any" de raíz
-interface SpeechRecognitionResult {
-  readonly [index: number]: {
-    readonly [index: number]: {
-      readonly transcript: string;
-    };
-  };
-}
-
-interface SpeechRecognitionEvent extends Event {
-  readonly results: SpeechRecognitionResult;
-}
-
-// Interfaces para el constructor y la instancia
-interface ISpeechRecognition extends EventTarget {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start(): void;
-  stop(): void;
-  onstart: () => void;
-  onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: { error: string }) => void;
-  onend: () => void;
-}
-
-// Extensión global de Window con tipos específicos
-declare global {
-  interface Window {
-    SpeechRecognition: {
-      new (): ISpeechRecognition;
-    };
-    webkitSpeechRecognition: {
-      new (): ISpeechRecognition;
-    };
-  }
-}
-
-interface SpeakingQuestion {
-  question: string;
-}
 
 export default function SpeakingModule() {
   const router = useRouter();
   const [userUid, setUserUid] = useState<string | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [currentStep, setCurrentStep] = useState(0);
-  const [score, setScore] = useState(0);
-  const [showResult, setShowResult] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState<string>("A1");
   const [loading, setLoading] = useState(true);
-  const [phrases, setPhrases] = useState<SpeakingQuestion[]>([]);
+  const [task, setTask] = useState<{prompt: string, targetSentence: string} | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [showResult, setShowResult] = useState(false);
+  const [score, setScore] = useState(0);
+  const recognitionRef = useRef<any>(null);
 
-  const fetchSpeakingData = useCallback(async (uid: string) => {
+  const fetchTask = useCallback(async (uid: string) => {
     try {
       setLoading(true);
-      const snap = await getDoc(doc(db, "user_progress", uid));
-      // Según el plan de Certifica AI, el historial es por nivel 
-      const level = snap.exists() ? snap.data().currentLevel : "A1";
+      const progressRef = doc(db, "user_progress", uid);
+      const snap = await getDoc(progressRef);
+      const levelToUse = snap.exists() ? snap.data().currentLevel : "A1";
+      setCurrentLevel(levelToUse);
 
-      const res = await fetch("http://127.0.0.1:8000/generate-questions", {
+      const res = await fetch("http://localhost:8000/api/v1/generate-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "speaking", level })
+        body: JSON.stringify({ type: "speaking", level: levelToUse })
       });
-      
+
+      if (!res.ok) throw new Error("Error backend");
       const data = await res.json();
-      const questions = data.questions || data.items || [{ question: "Hello, how are you today?" }];
-      setPhrases(questions);
+      
+      setTask({
+        prompt: data.prompt || "Pronuncia la oración:",
+        targetSentence: data.targetSentence || data.sentence || data.text || "English is fun to learn."
+      });
     } catch (e) {
-      console.error("Critical Failure:", e);
-      setPhrases([{ question: "System offline. Please try again." }]);
+      console.error("Fetch error:", e);
+      setTask({ prompt: "Modo Offline", targetSentence: "Check your server connection." });
     } finally {
       setLoading(false);
     }
@@ -100,161 +65,188 @@ export default function SpeakingModule() {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserUid(user.uid);
-        fetchSpeakingData(user.uid);
+        fetchTask(user.uid);
       } else {
         router.replace("/login");
       }
     });
+
+    const SpeechRecognition = typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = "en-US";
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.onresult = (e: any) => setTranscript(e.results[0][0].transcript);
+      recognitionRef.current.onend = () => setIsRecording(false);
+    }
+
     return () => unsub();
-  }, [router, fetchSpeakingData]);
+  }, [router, fetchTask]);
 
-  const startRecognition = () => {
-    const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionConstructor) {
-      alert("Browser does not support Speech Recognition.");
-      return;
-    }
-
-    const recognition = new SpeechRecognitionConstructor();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => setIsListening(true);
-    
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const result = event.results[0][0].transcript;
-      setTranscript(result);
-    };
-
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    
-    recognition.start();
-  };
-
-  const handleNext = async () => {
-    const target = phrases[currentStep].question.toLowerCase().replace(/[.,!?]/g, "");
-    const spoken = transcript.toLowerCase();
-    
-    if (spoken.includes(target.split(" ")[0])) { 
-        setScore(prev => prev + 1);
-    }
-
-    if (currentStep < phrases.length - 1) {
-      setCurrentStep(prev => prev + 1);
-      setTranscript("");
-    } else {
-      const finalScore = Math.round(((score + 1) / phrases.length) * 100);
-      await saveProgress(finalScore);
-      setShowResult(true);
-    }
-  };
-
-  const saveProgress = async (finalPercentage: number) => {
+  const updateFirebaseProgress = async (finalScore: number) => {
     if (!userUid) return;
     try {
-      await setDoc(doc(db, "user_progress", userUid), {
-        modules: { speaking: finalPercentage },
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (e) { console.error("Cloud Sync Error", e); }
+      const progressRef = doc(db, "user_progress", userUid);
+      const snap = await getDoc(progressRef);
+      const data = snap.data() || {};
+      
+      // Sincronización con la estructura unificada
+      const currentStats = data.modules || {};
+      const newStats = { ...currentStats, speaking: finalScore };
+      
+      const avg = Math.round(
+        ((newStats.reading || 0) + 
+         (newStats.listening || 0) + 
+         (newStats.writing || 0) + 
+         (newStats.speaking || 0)) / 4
+      );
+
+      await updateDoc(progressRef, {
+        "modules.speaking": finalScore,
+        [`progress_${currentLevel}`]: avg, // Esto actualiza la gráfica del Dashboard
+        "updatedAt": new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error saving progress:", error);
+    }
   };
 
-  const playTTS = (text: string) => {
-    if (typeof window !== "undefined") {
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = "en-US";
-      utt.rate = 0.9;
-      window.speechSynthesis.speak(utt);
-    }
+  const handleEvaluate = async () => {
+    if (!transcript || !task || !userUid) return;
+
+    const target = task.targetSentence.toLowerCase().replace(/[^\w\s]/g, "");
+    const input = transcript.toLowerCase().replace(/[^\w\s]/g, "");
+    
+    const targetWords = target.split(" ");
+    const matches = input.split(" ").filter(w => targetWords.includes(w)).length;
+    const finalScore = Math.min(100, Math.round((matches / targetWords.length) * 100));
+    
+    setScore(finalScore);
+    await updateFirebaseProgress(finalScore);
+    setShowResult(true);
+  };
+
+  const handleRetry = () => {
+    setShowResult(false);
+    setTranscript("");
+    setScore(0);
+    if (userUid) fetchTask(userUid);
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center">
-      <Loader2 className="animate-spin text-emerald-400 mb-4" size={40} />
-      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">Loading_Oral_Protocol</span>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
+      <Loader2 className="animate-spin text-cyan-500 mb-4" size={40} />
+      <p className="text-cyan-400 font-black text-[10px] tracking-[0.3em] uppercase italic">Iniciando Protocolo Speaking...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col">
-      <nav className="p-8 flex justify-between items-center bg-[#020617]/50 backdrop-blur-xl sticky top-0 z-50">
-        <Link href="/modulos" title="Back to Hub" className="p-3 hover:bg-white/5 rounded-2xl transition-all border border-white/5 text-slate-400 hover:text-white">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="px-6 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-           Step {currentStep + 1} of {phrases.length}
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col font-sans">
+      <nav className="p-8 flex justify-between items-center bg-[#020617]/80 backdrop-blur-md sticky top-0 z-50 border-b border-white/5">
+        <div className="flex items-center gap-6">
+          <Link href="/modulos" className="p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+            <ArrowLeft size={20}/>
+          </Link>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-cyan-500 rounded-2xl flex items-center justify-center font-black text-2xl text-[#020617] shadow-[0_0_20px_rgba(6,182,212,0.5)]">S</div>
+            <div>
+              <p className="text-[10px] font-black text-cyan-500 uppercase tracking-[0.3em] mb-1">Certifica_AI</p>
+              <h1 className="text-xl font-black uppercase italic tracking-tighter">Vocal_Lab</h1>
+            </div>
+          </div>
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 max-w-3xl mx-auto w-full">
-        <AnimatePresence mode="wait">
-          <motion.div 
-            key={currentStep}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="w-full bg-slate-900/40 border border-white/5 p-12 rounded-[4rem] text-center shadow-2xl relative overflow-hidden mb-12"
-          >
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-sky-500" />
-            <h2 className="text-4xl font-black italic uppercase leading-tight mb-8">
-              &quot;{phrases[currentStep]?.question}&quot;
-            </h2>
+      <main className="max-w-4xl mx-auto w-full p-6 py-12 space-y-12 flex-grow">
+        <section className="bg-slate-900/40 border border-white/5 p-12 rounded-[50px] text-center relative shadow-2xl overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+          <Sparkles className="absolute top-6 right-8 text-cyan-500/20" size={40} />
+          
+          <h2 className="text-[10px] font-black text-cyan-500/60 uppercase tracking-[0.4em] mb-6 italic">Target_Sentence_v2.0</h2>
+          <p className="text-4xl font-black italic tracking-tighter mb-10 leading-tight">"{task?.targetSentence}"</p>
+          
+          <div className="flex justify-center gap-6">
             <button 
-              onClick={() => playTTS(phrases[currentStep]?.question || "")} 
-              title="Play Example"
-              className="p-6 bg-white/5 rounded-full text-emerald-400 hover:bg-emerald-400 hover:text-slate-900 transition-all"
+              onClick={() => { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(task?.targetSentence); u.lang="en-US"; u.rate=0.9; window.speechSynthesis.speak(u); }}
+              className="flex items-center gap-2 px-6 py-3 bg-white/5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest border border-white/5"
             >
-              <Volume2 size={32} />
+              <Volume2 size={16} className="text-cyan-500" /> Escuchar Guía
             </button>
-          </motion.div>
-        </AnimatePresence>
+            <button 
+              title="Recargar pregunta"
+              onClick={() => fetchTask(userUid!)}
+              className="p-3 bg-white/5 rounded-full text-slate-500 hover:text-cyan-400 transition-all border border-white/5"
+            >
+              <RotateCcw size={18} />
+            </button>
+          </div>
+        </section>
 
-        <div className="flex flex-col items-center gap-10 w-full">
-          <button 
-            onClick={startRecognition}
-            title={isListening ? "Stop Microphone" : "Start Microphone"}
-            className={`w-28 h-28 rounded-full flex items-center justify-center transition-all ${isListening ? "bg-red-500 animate-pulse shadow-[0_0_50px_rgba(239,68,68,0.4)]" : "bg-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.2)] hover:scale-105"}`}
-          >
-            {isListening ? <MicOff size={40} /> : <Mic size={40} className="text-[#020617]" />}
-          </button>
+        <section className="flex flex-col items-center gap-8">
+          {/* Botón de Grabación con efecto Ripple */}
+          <div className="relative">
+            {isRecording && (
+              <motion.div 
+                initial={{ scale: 1, opacity: 0.5 }}
+                animate={{ scale: 1.5, opacity: 0 }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-0 bg-red-500 rounded-full"
+              />
+            )}
+            <button 
+              onClick={() => {
+                if(isRecording) recognitionRef.current?.stop();
+                else { setTranscript(""); recognitionRef.current?.start(); setIsRecording(true); }
+              }}
+              className={`w-32 h-32 rounded-full flex items-center justify-center relative z-10 transition-all ${isRecording ? "bg-red-500 shadow-[0_0_50px_rgba(239,68,68,0.5)]" : "bg-cyan-600 hover:bg-cyan-500 shadow-xl"}`}
+            >
+              {isRecording ? <MicOff size={40} /> : <Mic size={40} className="text-[#020617]" />}
+            </button>
+          </div>
 
-          <div className="min-h-[4rem] text-center">
+          <div className="w-full bg-slate-900/60 p-10 rounded-[40px] border border-white/5 text-center min-h-[140px] flex items-center justify-center relative">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1">
+              {[1,2,3].map(i => <div key={i} className={`w-1 h-1 rounded-full ${isRecording ? "bg-red-500 animate-bounce" : "bg-slate-700"}`} style={{ animationDelay: `${i*0.2}s` }} />)}
+            </div>
             {transcript ? (
-              <p className="text-emerald-400 font-bold text-2xl uppercase italic tracking-tighter">
-                &quot;{transcript}&quot;
-              </p>
+              <p className="text-2xl font-bold italic text-white leading-relaxed">"{transcript}"</p>
             ) : (
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Tap microphone to begin speaking</p>
+              <p className="text-slate-500 uppercase text-[10px] font-black tracking-[0.3em]">Esperando entrada de audio...</p>
             )}
           </div>
 
           <button 
-            disabled={!transcript || isListening}
-            onClick={handleNext}
-            className="w-full py-6 bg-white text-slate-950 rounded-3xl font-black uppercase text-xs tracking-widest disabled:opacity-20 hover:bg-emerald-400 transition-all flex items-center justify-center gap-3"
+            disabled={!transcript || isRecording}
+            onClick={handleEvaluate}
+            className="w-full py-8 bg-white text-[#020617] rounded-[30px] font-black uppercase text-[11px] tracking-[0.5em] disabled:opacity-10 hover:bg-cyan-400 transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95"
           >
-            {currentStep === phrases.length - 1 ? "Sync_Final_Results" : "Next_Phase"} <Send size={16} />
+            Sincronizar Protocolo <Send size={18} />
           </button>
-        </div>
+        </section>
       </main>
 
-      {showResult && (
-        <div className="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-6">
-          <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="bg-slate-900 border border-white/10 p-16 rounded-[4rem] text-center max-w-md w-full shadow-2xl">
-            <Award className="mx-auto text-emerald-400 mb-8" size={80} />
-            <div className="text-7xl font-black italic mb-4">{Math.round((score/phrases.length)*100)}%</div>
-            <p className="text-slate-400 uppercase text-[10px] font-black tracking-widest mb-12 italic">Speaking_Mastery_Level</p>
-            <button onClick={() => router.push("/modulos")} className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest">Return_to_Hub</button>
-            <button onClick={() => window.location.reload()} title="Retry Test" className="mt-4 text-slate-500 flex items-center justify-center gap-2 w-full text-[10px] font-black uppercase tracking-widest">
-              <RotateCcw size={14} /> Retry_Module
-            </button>
-          </motion.div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showResult && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/98 backdrop-blur-2xl">
+            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0f172a] border border-cyan-500/20 p-16 rounded-[70px] text-center max-w-md w-full shadow-3xl">
+              <Award className="mx-auto text-cyan-400 mb-8 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]" size={100} />
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <h2 className="text-9xl font-black italic text-white tracking-tighter">{score}</h2>
+                <span className="text-4xl font-black text-cyan-500 italic">%</span>
+              </div>
+              <p className="text-cyan-500/50 text-[11px] font-black uppercase tracking-[0.6em] mb-12 italic">Vocal_Accuracy_Score</p>
+              <div className="flex flex-col gap-4">
+                <button onClick={handleRetry} className="w-full py-6 bg-white/5 border border-white/10 text-white rounded-[25px] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-white/10 transition-all">
+                  <RotateCcw size={18} /> Reintentar Fase
+                </button>
+                <button onClick={() => router.push("/modulos")} className="w-full py-7 bg-cyan-600 text-[#020617] rounded-[25px] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(8,145,178,0.3)] hover:bg-cyan-500 transition-all">
+                  <LayoutGrid size={18} /> Panel de Módulos
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

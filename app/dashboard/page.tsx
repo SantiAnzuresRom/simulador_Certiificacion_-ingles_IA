@@ -1,10 +1,16 @@
 "use client";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
-import { Award, BarChart3, Target, Zap } from "lucide-react";
-import Image from "next/image";
+import {
+  ArrowRight,
+  Award,
+  BarChart3,
+  Target,
+  User as UserIcon,
+  Zap,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { auth, db } from "../src/firebase/config";
@@ -13,173 +19,265 @@ export default function DashboardPage() {
   const router = useRouter();
   const [level, setLevel] = useState<string>("A1");
   const [userData, setUserData] = useState({ name: "", email: "", uid: "" });
+  const [loading, setLoading] = useState(true);
+
+  const [stats, setStats] = useState({
+    A1: 0,
+    A2: 0,
+    B1: 0,
+    B2: 0,
+    C1: 0,
+    C2: 0,
+  });
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace("/login");
         return;
       }
 
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      const data = userSnap.exists() ? userSnap.data() : {};
-
       setUserData({
-        name: data?.full_name || user.displayName || "STUDENT_ALPHA",
+        name: user.displayName || "STUDENT_ALPHA",
         email: user.email || "",
         uid: user.uid,
       });
 
       const progressRef = doc(db, "user_progress", user.uid);
-      const progressSnap = await getDoc(progressRef);
-      if (progressSnap.exists()) {
-        setLevel(progressSnap.data().currentLevel);
-      }
+
+      const unsubSnap = onSnapshot(progressRef, async (docSnap) => {
+        if (docSnap.exists()) {
+          const pData = docSnap.data();
+          const currentLvl = pData.currentLevel || "A1";
+          setLevel(currentLvl);
+
+          // --- NUEVA LÓGICA DE CÁLCULO DINÁMICO ---
+
+          // Función para calcular promedio de cualquier objeto de módulos (A1, A2, etc.)
+          const calculateLevelAvg = (moduleData: any) => {
+            if (!moduleData) return 0;
+            const {
+              reading = 0,
+              listening = 0,
+              writing = 0,
+              speaking = 0,
+            } = moduleData;
+            return Math.round((reading + listening + writing + speaking) / 4);
+          };
+
+          // Mapeamos los stats leyendo directamente de tus nuevos campos modules_XX
+          const newStats = {
+            A1: calculateLevelAvg(pData.modules_A1),
+            A2: calculateLevelAvg(pData.modules_A2),
+            B1: calculateLevelAvg(pData.modules_B1),
+            B2: calculateLevelAvg(pData.modules_B2),
+            C1: calculateLevelAvg(pData.modules_C1),
+            C2: calculateLevelAvg(pData.modules_C2),
+          };
+
+          setStats(newStats);
+
+          // Sincronizamos el progreso general (progress) con el nivel que el usuario está viendo
+          const currentProgressValue =
+            newStats[currentLvl as keyof typeof newStats];
+
+          if (currentProgressValue !== pData.progress) {
+            await updateDoc(progressRef, {
+              progress: currentProgressValue,
+            });
+          }
+        }
+        setLoading(false);
+      });
+
+      return () => unsubSnap();
     });
-    return () => unsub();
+
+    return () => unsubAuth();
   }, [router]);
 
   const handleLevelSelect = async (lvl: string) => {
     if (!userData.uid) return;
-    setLevel(lvl);
     try {
       const progressRef = doc(db, "user_progress", userData.uid);
-      await setDoc(progressRef, {
+      await updateDoc(progressRef, {
         currentLevel: lvl,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      
-      // Navegación directa a módulos
+        updatedAt: new Date().toISOString(),
+      });
+      setLevel(lvl);
       router.push("/modulos");
     } catch (error) {
       console.error("Sync Error:", error);
     }
   };
 
-  // Historial General por Nivel (Como solicitaste)
   const levelHistory = [
-    { lvl: "A1", progress: 95, color: "bg-cyan-500" },
-    { lvl: "A2", progress: 60, color: "bg-blue-500" },
-    { lvl: "B1", progress: 25, color: "bg-purple-500" },
-    { lvl: "B2", progress: 0, color: "bg-slate-700" },
+    { lvl: "A1", progress: stats.A1, color: "from-cyan-400 to-blue-500" },
+    { lvl: "A2", progress: stats.A2, color: "from-blue-500 to-indigo-500" },
+    { lvl: "B1", progress: stats.B1, color: "from-indigo-500 to-purple-500" },
+    { lvl: "B2", progress: stats.B2, color: "from-slate-600 to-slate-400" },
+    { lvl: "C1", progress: stats.C1, color: "from-purple-600 to-pink-600" },
+    { lvl: "C2", progress: stats.C2, color: "from-amber-500 to-orange-600" },
   ];
 
+  if (loading)
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+      </div>
+    );
+
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-cyan-500/30">
-      {/* BACKGROUND DECOR (LA X GIGANTE) */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] -right-[10%] w-[600px] h-[600px]">
-          <Image src="/logo2.png" alt="X" width={600} height={600} className="brightness-50" />
-        </div>
+    <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full" />
       </div>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
-        
-        {/* HEADER SECTION */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
-          <div className="flex items-center gap-6">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-              <div className="relative w-20 h-20 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center overflow-hidden">
-                <span className="text-3xl font-black text-white italic">{userData.name.charAt(0)}</span>
+      <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        <header className="flex flex-col md:flex-row justify-between items-center mb-10 p-10 bg-white/5 border border-white/10 rounded-[48px] backdrop-blur-2xl shadow-3xl">
+          <div className="flex items-center gap-8">
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full blur opacity-40"></div>
+              <div className="relative w-24 h-24 rounded-full bg-[#020617] border-2 border-white/10 flex items-center justify-center overflow-hidden">
+                <UserIcon size={40} className="text-slate-500" />
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-cyan-500">System_Online</span>
-              </div>
-              <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter leading-none">{userData.name}</h1>
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-cyan-500 mb-2 block italic">
+                Neural_Active
+              </span>
+              <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter leading-none">
+                {userData.name.split(" ")[0]}
+              </h1>
             </div>
           </div>
 
-          <div className="bg-slate-900/50 border border-white/5 p-4 rounded-3xl backdrop-blur-xl">
-            <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">Nivel_Actual</p>
-            <p className="text-2xl font-black text-cyan-400 italic">{level}</p>
+          <div className="flex items-center gap-8 mt-8 md:mt-0 bg-white/5 p-6 rounded-3xl border border-white/5">
+            <div className="text-center px-4 border-r border-white/10">
+              <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1">
+                Rank
+              </p>
+              <p className="text-3xl font-black text-white italic">#042</p>
+            </div>
+            <div className="text-center px-4">
+              <p className="text-[9px] font-black uppercase text-cyan-500 tracking-widest mb-1">
+                Target_Level
+              </p>
+              <p className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400 italic leading-none">
+                {level}
+              </p>
+            </div>
           </div>
         </header>
 
-        {/* GRID PRINCIPAL */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* SELECCIÓN DE NIVEL (ESTILO CON LOGO) */}
-          <section className="lg:col-span-8">
-            <div className="bg-[#070c1b]/80 border border-white/5 rounded-[40px] p-8 backdrop-blur-xl">
-              <div className="flex items-center justify-between mb-10">
-                <div className="flex items-center gap-3">
-                  <Target className="text-cyan-500" size={20} />
-                  <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-white italic">Missions_Selection</h2>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          <section className="lg:col-span-8 bg-slate-900/40 border border-white/10 rounded-[60px] p-12 backdrop-blur-3xl shadow-2xl">
+            <div className="flex items-center gap-4 mb-12">
+              <div className="p-3 bg-cyan-500/10 rounded-2xl border border-cyan-500/20">
+                <Target className="text-cyan-400" size={24} />
               </div>
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white italic">
+                  Nivel de Entrenamiento
+                </h2>
+                <p className="text-[10px] text-slate-500 uppercase mt-1">
+                  Selecciona el rango de tu certificación
+                </p>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => handleLevelSelect(lvl)}
-                    className={`relative overflow-hidden h-40 rounded-[32px] border-2 transition-all duration-500 group
-                      ${level === lvl 
-                        ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_30px_rgba(6,182,212,0.15)]" 
-                        : "border-white/5 bg-slate-900/40 hover:border-white/20 hover:scale-[1.02]"}`}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
+                <motion.button
+                  key={lvl}
+                  whileHover={{ scale: 1.02, y: -5 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleLevelSelect(lvl)}
+                  className={`group relative h-40 rounded-[40px] border-2 transition-all duration-500 flex flex-col items-center justify-center
+                    ${level === lvl ? "border-cyan-500 bg-cyan-500/10 shadow-[0_0_40px_rgba(6,182,212,0.15)]" : "border-white/5 bg-[#020617]/50 hover:border-white/20"}`}
+                >
+                  <span
+                    className={`text-6xl font-black italic transition-all duration-500 
+                    ${level === lvl ? "text-white scale-110" : "text-slate-800 group-hover:text-slate-600"}`}
                   >
-                    {/* El logo que te gustaba en el hover */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity">
-                      <Image src="/logo2.png" alt="X" layout="fill" objectFit="cover" className="grayscale" />
+                    {lvl}
+                  </span>
+                  {level === lvl && (
+                    <div className="absolute top-6 right-6 flex flex-col items-center">
+                      <Zap
+                        size={16}
+                        className="text-cyan-400 animate-pulse mb-1"
+                      />
+                      <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">
+                        Active
+                      </span>
                     </div>
-                    
-                    <span className={`relative text-5xl font-black italic ${level === lvl ? "text-white" : "text-slate-700 group-hover:text-slate-500"}`}>
-                      {lvl}
-                    </span>
-
-                    {level === lvl && (
-                      <div className="absolute bottom-4 right-5">
-                        <Zap size={20} className="text-cyan-400 animate-pulse" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
+                  )}
+                </motion.button>
+              ))}
             </div>
           </section>
 
-          {/* BARRA LATERAL (HISTORIAL POR NIVEL) */}
-          <aside className="lg:col-span-4 space-y-6">
-            <div className="bg-[#0f172a]/50 border border-white/5 rounded-[40px] p-8 backdrop-blur-md">
-              <div className="flex items-center gap-3 mb-8">
-                <BarChart3 className="text-cyan-500" size={18} />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Global_Progress</h3>
+          <aside className="lg:col-span-4 space-y-8">
+            <motion.button
+              whileHover={{ scale: 1.02, y: -5 }}
+              onClick={() => router.push("/results")}
+              className="w-full p-8 rounded-[40px] bg-gradient-to-br from-[#0f172a] to-[#1e293b] border border-white/10 flex items-center justify-between group shadow-2xl"
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 bg-cyan-500/20 rounded-2xl flex items-center justify-center group-hover:bg-cyan-500/30 transition-all">
+                  <Award size={28} className="text-cyan-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500 italic">
+                    Analysis_Center
+                  </p>
+                  <h4 className="text-xl font-black uppercase italic text-white tracking-tighter">
+                    Ver Reporte
+                  </h4>
+                </div>
               </div>
-              
-              <div className="space-y-6">
+              <ArrowRight
+                size={20}
+                className="text-slate-600 group-hover:text-white group-hover:translate-x-2 transition-all"
+              />
+            </motion.button>
+
+            <div className="bg-white/5 border border-white/10 rounded-[50px] p-10 backdrop-blur-md">
+              <div className="flex items-center gap-4 mb-10">
+                <BarChart3 className="text-cyan-400" size={20} />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 italic">
+                  Global_Progress
+                </h3>
+              </div>
+
+              <div className="space-y-7">
                 {levelHistory.map((item) => (
-                  <div key={item.lvl} className="p-5 bg-black/20 rounded-2xl border border-white/5">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-3">
-                        <Award size={14} className="text-slate-500" />
-                        <p className="text-xs font-black text-white italic">Nivel {item.lvl}</p>
-                      </div>
-                      <span className="text-[10px] font-black text-cyan-500">{item.progress}%</span>
+                  <div key={item.lvl} className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <span
+                        className={`text-[11px] font-black italic uppercase ${level === item.lvl ? "text-cyan-400" : "text-slate-500"}`}
+                      >
+                        {item.lvl}_Stage
+                      </span>
+                      <span className="text-[10px] font-black text-white">
+                        {item.progress}%
+                      </span>
                     </div>
-                    <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }} 
-                        animate={{ width: `${item.progress}%` }} 
-                        className={`h-full ${item.color}`} 
+                    <div className="h-2 w-full bg-slate-950 rounded-full border border-white/5 p-[1px] overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.progress}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className={`h-full rounded-full bg-gradient-to-r ${item.color}`}
                       />
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="p-8 bg-cyan-500/10 border border-cyan-500/20 rounded-[40px] relative overflow-hidden group">
-               <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">X-Learning Status</p>
-               <h4 className="text-xl font-black text-white italic uppercase tracking-tight leading-tight">Tu progreso es asertivo y proactivo.</h4>
-               <p className="text-[8px] text-slate-500 mt-4 uppercase tracking-[0.2em]">Selecciona un rango para desplegar submisiones.</p>
-            </div>
           </aside>
-
         </div>
       </main>
     </div>
