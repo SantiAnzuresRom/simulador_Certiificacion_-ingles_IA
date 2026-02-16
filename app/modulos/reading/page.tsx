@@ -101,7 +101,6 @@ export default function ReadingModule() {
         reading: finalScore,
       };
 
-      // Cálculo de promedio basado en la nueva estructura
       const newAvg = Math.round(
         (updatedModuleStats.reading +
           (updatedModuleStats.listening || 0) +
@@ -112,7 +111,7 @@ export default function ReadingModule() {
 
       await updateDoc(progressRef, {
         [levelKey]: updatedModuleStats,
-        [`progress_${currentLevel}`]: newAvg, // Aseguramos que la gráfica general se actualice
+        [`progress_${currentLevel}`]: newAvg,
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -121,7 +120,6 @@ export default function ReadingModule() {
   };
 
   const handleNext = async () => {
-    // Blindaje de data
     if (selectedAnswer === null || !data || !data.questions) return;
 
     const isCorrect =
@@ -152,7 +150,6 @@ export default function ReadingModule() {
     if (userUid) fetchReadingData(userUid);
   };
 
-  // --- RENDERING GUARDS ---
   if (loading || !data || !data.questions) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
@@ -169,8 +166,8 @@ export default function ReadingModule() {
           />
         </motion.div>
         <Loader2 className="animate-spin text-cyan-500 mb-4" size={30} />
-        <p className="text-cyan-400 text-[10px] font-black uppercase tracking-[0.5em]">
-          Iniciando Protocolo Reading...
+        <p className="text-cyan-400 text-[11px] font-bold italic tracking-[0.4em]">
+          Iniciando protocolo reading...
         </p>
       </div>
     );
@@ -191,19 +188,18 @@ export default function ReadingModule() {
               R
             </div>
             <div>
-              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-cyan-400 block leading-none mb-1">
+              <span className="text-[9px] font-bold italic tracking-[0.3em] text-cyan-400 block leading-none mb-1">
                 Certifica_AI
               </span>
-              <h1 className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-white">
-                <BookOpen size={14} className="text-indigo-400" /> READING_LAB
+              <h1 className="text-sm font-black italic flex items-center gap-2 uppercase tracking-tight text-white">
+                <BookOpen size={14} className="text-indigo-400" /> Reading_Lab
               </h1>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3 bg-cyan-500/10 px-5 py-2 rounded-full border border-cyan-500/30">
-          <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest italic">
-            {/* USO DE OPTIONAL CHAINING AQUÍ POR SI ACASO */}
-            Task {currentQuestion + 1} / {data?.questions?.length || 0}
+          <span className="text-[10px] font-bold text-cyan-400 italic tracking-widest uppercase">
+            Tarea {currentQuestion + 1} / {data?.questions?.length || 0}
           </span>
         </div>
       </header>
@@ -218,13 +214,13 @@ export default function ReadingModule() {
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <Sparkles size={80} className="text-cyan-400" />
             </div>
-            <h2 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+            <h2 className="text-[10px] font-bold text-cyan-400 italic tracking-[0.2em] mb-6 flex items-center gap-2">
               Neural_Source_Text
             </h2>
             <h1 className="text-3xl font-black text-white italic uppercase mb-8 tracking-tighter leading-none border-l-4 border-cyan-500 pl-6">
               {data.title}
             </h1>
-            <div className="flex-1 overflow-y-auto custom-scrollbar text-xl leading-[1.8] text-slate-300 font-medium pr-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar text-lg leading-[1.8] text-slate-300 font-medium pr-4">
               {data.passage}
             </div>
           </motion.div>
@@ -236,7 +232,7 @@ export default function ReadingModule() {
             animate={{ y: 0, opacity: 1 }}
             className="bg-slate-900/40 rounded-[3rem] shadow-2xl border border-white/5 p-10 flex flex-col gap-8"
           >
-            <h3 className="text-2xl font-black text-white italic uppercase leading-tight tracking-tight">
+            <h3 className="text-2xl font-black text-white italic tracking-tight leading-tight">
               {data.questions[currentQuestion]?.question}
             </h3>
             <div className="space-y-4">
@@ -265,7 +261,7 @@ export default function ReadingModule() {
                     )}
                   </div>
                   <span
-                    className={`font-bold uppercase text-sm tracking-tight ${
+                    className={`font-bold text-sm tracking-tight ${
                       selectedAnswer === i ? "text-white" : "text-slate-400"
                     }`}
                   >
@@ -277,11 +273,11 @@ export default function ReadingModule() {
             <button
               disabled={selectedAnswer === null}
               onClick={handleNext}
-              className="w-full py-6 bg-white text-[#020617] rounded-[30px] font-black uppercase text-[11px] tracking-[0.3em] disabled:opacity-20 hover:bg-cyan-400 transition-all flex items-center justify-center gap-3"
+              className="w-full py-6 bg-white text-[#020617] rounded-[30px] font-black italic uppercase text-[11px] tracking-[0.2em] disabled:opacity-20 hover:bg-cyan-400 transition-all flex items-center justify-center gap-3"
             >
               {currentQuestion === data.questions.length - 1
-                ? "Finalizar Protocolo"
-                : "Siguiente Pregunta"}{" "}
+                ? "Finalizar protocolo"
+                : "Siguiente pregunta"}
               <Send size={16} />
             </button>
           </motion.div>
@@ -299,8 +295,8 @@ export default function ReadingModule() {
               <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20">
                 <CheckCircle2 size={40} />
               </div>
-              <h2 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.5em] mb-4 italic">
-                Reading_Analysis_Complete
+              <h2 className="text-[10px] font-bold text-cyan-400 italic tracking-[0.4em] mb-4 uppercase">
+                Análisis finalizado
               </h2>
               <div className="text-8xl font-black text-white italic tracking-tighter mb-8">
                 {Math.round(
@@ -311,15 +307,15 @@ export default function ReadingModule() {
               <div className="flex flex-col gap-4">
                 <button
                   onClick={handleRetry}
-                  className="w-full py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 flex items-center justify-center gap-3"
+                  className="w-full py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-bold italic uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-3"
                 >
-                  <RotateCcw size={16} /> Reintentar Misión
+                  <RotateCcw size={16} /> Reintentar misión
                 </button>
                 <button
                   onClick={() => router.push("/modulos")}
-                  className="w-full py-6 bg-cyan-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-cyan-500 shadow-lg flex items-center justify-center gap-3"
+                  className="w-full py-6 bg-cyan-600 text-white rounded-2xl font-black italic uppercase text-[11px] tracking-[0.2em] hover:bg-cyan-500 shadow-lg flex items-center justify-center gap-3"
                 >
-                  <LayoutGrid size={16} /> Regresar al Menú
+                  <LayoutGrid size={16} /> Regresar al menú
                 </button>
               </div>
             </motion.div>

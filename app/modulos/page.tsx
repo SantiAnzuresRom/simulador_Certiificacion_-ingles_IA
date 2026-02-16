@@ -37,13 +37,10 @@ export default function ModulosPage() {
           (snap) => {
             if (snap.exists()) {
               const data = snap.data();
-
-              // 1. Detectamos Nivel Actual para saber qué objeto leer
               const lvl = data.currentLevel || "A1";
               setCurrentLevel(lvl);
 
-              // 2. Extraemos el progreso del objeto específico (Ej: modules_A1)
-              // Usamos la nueva estructura que definiste
+              // Acceso dinámico al historial general por nivel
               const moduleKey = `modules_${lvl}`;
               const source = data[moduleKey] || {};
 
@@ -56,7 +53,6 @@ export default function ModulosPage() {
 
               setPercentages(scores);
 
-              // 3. El PROGRESO GENERAL es el promedio de este nivel específico
               const average =
                 (scores.reading +
                   scores.listening +
@@ -66,9 +62,7 @@ export default function ModulosPage() {
               setOverallProgress(Math.round(average));
             }
           },
-          (error) => {
-            console.error("Error en Sync de Firestore:", error);
-          },
+          (error) => console.error("Error en Sync de Firestore:", error),
         );
 
         return () => unsubSnap();
@@ -144,18 +138,18 @@ export default function ModulosPage() {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-4"
             >
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-xl p-2">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-xl p-2 transition-transform hover:rotate-12">
                 <Image src="/logo2.png" alt="Logo" width={32} height={32} />
               </div>
               <div className="h-10 w-[1px] bg-white/10 mx-2" />
-              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500 italic">
                 Certifica_AI / Training_Ground
               </h2>
             </motion.div>
 
             <Link
               href="/dashboard"
-              className="group flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all backdrop-blur-xl"
+              className="group flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-xl active:scale-95"
             >
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white italic">
                 Back_to_System
@@ -215,21 +209,21 @@ export default function ModulosPage() {
                   initial={{ width: 0 }}
                   animate={{ width: `${overallProgress}%` }}
                   transition={{ duration: 1.5, ease: "circOut" }}
-                  className="h-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 rounded-full shadow-[0_0_15px_rgba(56,189,248,0.5)]"
+                  className="h-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 rounded-full shadow-[0_0_20px_rgba(56,189,248,0.4)]"
                 />
               </div>
             </motion.div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {modulos.map((m, index) => (
             <Link href={m.path} key={m.id} className="block group">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="relative bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[3rem] p-10 transition-all duration-500 hover:border-white/20 group-hover:bg-slate-900/60 overflow-hidden"
+                className="relative bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[3rem] p-10 transition-all duration-500 hover:border-white/20 group-hover:bg-slate-900/60 overflow-hidden group-hover:shadow-2xl group-hover:shadow-sky-500/5"
               >
                 <div className="flex justify-between items-center relative z-10">
                   <div className="flex items-center gap-8">
@@ -252,7 +246,7 @@ export default function ModulosPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="h-14 w-14 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-slate-950 transition-all duration-500 shadow-inner">
+                  <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-white group-hover:text-slate-950 transition-all duration-500 shadow-inner group-active:scale-90">
                     <ChevronRight size={28} />
                   </div>
                 </div>
@@ -265,6 +259,7 @@ export default function ModulosPage() {
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${m.p}%` }}
+                      transition={{ duration: 1, delay: 0.5 }}
                       className={`h-full rounded-full bg-gradient-to-r ${m.color}`}
                     />
                   </div>

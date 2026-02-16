@@ -38,22 +38,19 @@ export default function DashboardPage() {
       }
 
       setUserData({
-        name: user.displayName || "STUDENT_ALPHA",
+        name: user.displayName || "Estudiante",
         email: user.email || "",
         uid: user.uid,
       });
 
       const progressRef = doc(db, "user_progress", user.uid);
 
-      const unsubSnap = onSnapshot(progressRef, async (docSnap) => {
+      const unsubSnap = onSnapshot(progressRef, (docSnap) => {
         if (docSnap.exists()) {
           const pData = docSnap.data();
           const currentLvl = pData.currentLevel || "A1";
           setLevel(currentLvl);
 
-          // --- NUEVA LÓGICA DE CÁLCULO DINÁMICO ---
-
-          // Función para calcular promedio de cualquier objeto de módulos (A1, A2, etc.)
           const calculateLevelAvg = (moduleData: any) => {
             if (!moduleData) return 0;
             const {
@@ -65,7 +62,6 @@ export default function DashboardPage() {
             return Math.round((reading + listening + writing + speaking) / 4);
           };
 
-          // Mapeamos los stats leyendo directamente de tus nuevos campos modules_XX
           const newStats = {
             A1: calculateLevelAvg(pData.modules_A1),
             A2: calculateLevelAvg(pData.modules_A2),
@@ -76,16 +72,6 @@ export default function DashboardPage() {
           };
 
           setStats(newStats);
-
-          // Sincronizamos el progreso general (progress) con el nivel que el usuario está viendo
-          const currentProgressValue =
-            newStats[currentLvl as keyof typeof newStats];
-
-          if (currentProgressValue !== pData.progress) {
-            await updateDoc(progressRef, {
-              progress: currentProgressValue,
-            });
-          }
         }
         setLoading(false);
       });
@@ -144,25 +130,25 @@ export default function DashboardPage() {
               </div>
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-cyan-500 mb-2 block italic">
-                Neural_Active
+              <span className="text-[10px] font-black tracking-[0.5em] text-cyan-500 mb-2 block italic">
+                Neural Active
               </span>
-              <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter leading-none">
-                {userData.name.split(" ")[0]}
+              <h1 className="text-4xl font-black text-white italic tracking-tighter leading-none">
+                {userData.name}
               </h1>
             </div>
           </div>
 
           <div className="flex items-center gap-8 mt-8 md:mt-0 bg-white/5 p-6 rounded-3xl border border-white/5">
             <div className="text-center px-4 border-r border-white/10">
-              <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-1">
+              <p className="text-[9px] font-black text-slate-500 tracking-widest mb-1">
                 Rank
               </p>
               <p className="text-3xl font-black text-white italic">#042</p>
             </div>
             <div className="text-center px-4">
-              <p className="text-[9px] font-black uppercase text-cyan-500 tracking-widest mb-1">
-                Target_Level
+              <p className="text-[9px] font-black text-cyan-500 tracking-widest mb-1">
+                Target Level
               </p>
               <p className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400 italic leading-none">
                 {level}
@@ -178,10 +164,10 @@ export default function DashboardPage() {
                 <Target className="text-cyan-400" size={24} />
               </div>
               <div>
-                <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white italic">
-                  Nivel de Entrenamiento
+                <h2 className="text-sm font-black tracking-[0.1em] text-white italic">
+                  Nivel de entrenamiento
                 </h2>
-                <p className="text-[10px] text-slate-500 uppercase mt-1">
+                <p className="text-[10px] text-slate-500 mt-1">
                   Selecciona el rango de tu certificación
                 </p>
               </div>
@@ -209,7 +195,7 @@ export default function DashboardPage() {
                         size={16}
                         className="text-cyan-400 animate-pulse mb-1"
                       />
-                      <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest">
+                      <span className="text-[8px] font-black text-cyan-400 tracking-widest">
                         Active
                       </span>
                     </div>
@@ -230,11 +216,11 @@ export default function DashboardPage() {
                   <Award size={28} className="text-cyan-400" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500 italic">
-                    Analysis_Center
+                  <p className="text-[9px] font-black tracking-[0.4em] text-slate-500 italic">
+                    Analysis Center
                   </p>
-                  <h4 className="text-xl font-black uppercase italic text-white tracking-tighter">
-                    Ver Reporte
+                  <h4 className="text-xl font-black italic text-white tracking-tighter">
+                    Ver reporte
                   </h4>
                 </div>
               </div>
@@ -247,8 +233,8 @@ export default function DashboardPage() {
             <div className="bg-white/5 border border-white/10 rounded-[50px] p-10 backdrop-blur-md">
               <div className="flex items-center gap-4 mb-10">
                 <BarChart3 className="text-cyan-400" size={20} />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 italic">
-                  Global_Progress
+                <h3 className="text-[10px] font-black tracking-[0.4em] text-slate-400 italic">
+                  Progreso global
                 </h3>
               </div>
 
@@ -257,9 +243,9 @@ export default function DashboardPage() {
                   <div key={item.lvl} className="space-y-2">
                     <div className="flex justify-between items-center px-1">
                       <span
-                        className={`text-[11px] font-black italic uppercase ${level === item.lvl ? "text-cyan-400" : "text-slate-500"}`}
+                        className={`text-[11px] font-black italic ${level === item.lvl ? "text-cyan-400" : "text-slate-500"}`}
                       >
-                        {item.lvl}_Stage
+                        Etapa {item.lvl}
                       </span>
                       <span className="text-[10px] font-black text-white">
                         {item.progress}%

@@ -9,6 +9,7 @@ import {
   Loader2,
   RotateCcw,
   Send,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,7 +34,7 @@ export default function ProfessionalWritingPage() {
 
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
 
-  // --- OBTENER TEMA DESDE EL BACKEND ---
+  // --- OBTENER TEMA ---
   const fetchPrompt = useCallback(async (level: string) => {
     try {
       setFetchingPrompt(true);
@@ -42,17 +43,11 @@ export default function ProfessionalWritingPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "writing",
-            level: level || "A1",
-          }),
+          body: JSON.stringify({ type: "writing", level: level || "A1" }),
         },
       );
-
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
-
-      // Ajuste para coincidir con el JSON que devuelve tu main.py {title, passage}
       setPrompt(
         data.passage ||
           data.title ||
@@ -66,7 +61,7 @@ export default function ProfessionalWritingPage() {
     }
   }, []);
 
-  // --- CARGA INICIAL Y NIVEL ---
+  // --- LÓGICA DE AUTENTICACIÓN Y NIVEL ---
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -74,11 +69,9 @@ export default function ProfessionalWritingPage() {
         try {
           const snap = await getDoc(doc(db, "user_progress", user.uid));
           const level = snap.exists() ? snap.data().currentLevel : "A1";
-          const levelToUse = level || "A1";
-          setSelectedLevel(levelToUse);
-          fetchPrompt(levelToUse);
+          setSelectedLevel(level || "A1");
+          fetchPrompt(level || "A1");
         } catch (err) {
-          console.error("Firebase Init Error", err);
           fetchPrompt("A1");
         }
       } else {
@@ -88,31 +81,29 @@ export default function ProfessionalWritingPage() {
     return () => unsub();
   }, [fetchPrompt, router]);
 
-  // --- GUARDADO EN FIREBASE (ESTRUCTURA DE NIVELES) ---
+  // --- ACTUALIZAR PROGRESO (FIREBASE) ---
   const updateFirebaseProgress = async (finalScore: number) => {
     if (!userUid) return;
     try {
       const progressRef = doc(db, "user_progress", userUid);
       const snap = await getDoc(progressRef);
       const currentData = snap.data() || {};
-
-      // Accedemos dinámicamente: modules_A1, modules_A2, etc.
       const levelKey = `modules_${selectedLevel}`;
-      const currentStats = currentData[levelKey] || {
-        reading: 0,
-        listening: 0,
-        writing: 0,
-        speaking: 0,
-      };
 
+      const currentStats = currentData[levelKey] || {
+        listening: 0,
+        reading: 0,
+        speaking: 0,
+        writing: 0,
+      };
       const newStats = { ...currentStats, writing: finalScore };
 
-      // Cálculo del promedio para este nivel específico
+      // Promedio del nivel
       const avg = Math.round(
-        ((newStats.reading || 0) +
-          (newStats.listening || 0) +
-          (newStats.writing || 0) +
-          (newStats.speaking || 0)) /
+        (newStats.reading +
+          newStats.listening +
+          newStats.writing +
+          newStats.speaking) /
           4,
       );
 
@@ -126,17 +117,11 @@ export default function ProfessionalWritingPage() {
     }
   };
 
-  // --- ENVIAR A EVALUAR (IA) ---
+  // --- ENVIAR EVALUACIÓN ---
   const handleSubmit = async () => {
-    if (wordCount < 10)
-      return alert(
-        "Tu composición es muy corta. Por favor, añade más detalle.",
-      );
-
+    if (wordCount < 10) return alert("Tu composición es muy corta.");
     setLoading(true);
     try {
-      if (!userUid) throw new Error("Session expired");
-
       const response = await fetch(
         "http://127.0.0.1:8000/api/v1/grade-writing",
         {
@@ -149,46 +134,28 @@ export default function ProfessionalWritingPage() {
           }),
         },
       );
-
-      if (!response.ok) {
-        const errorDetail = await response.json();
-        console.error("FastAPI Error Detail:", errorDetail);
-        throw new Error("Evaluation failed");
-      }
-
+      if (!response.ok) throw new Error("Evaluation failed");
       const data = await response.json();
-
       const evaluation: EvaluationResult = {
         score: Number(data.score) || 0,
-        feedback: data.feedback || "Good effort! Keep practicing your grammar.",
+        feedback: data.feedback || "Keep practicing!",
       };
-
       setResult(evaluation);
       await updateFirebaseProgress(evaluation.score);
       setShowModal(true);
     } catch (error) {
-      console.error("Submission Error:", error);
-      alert(
-        "Hubo un error con la evaluación. Revisa que el servidor FastAPI esté corriendo.",
-      );
+      alert("Hubo un error con la evaluación.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRetry = () => {
-    setText("");
-    setResult(null);
-    setShowModal(false);
-    fetchPrompt(selectedLevel);
-  };
-
-  if (fetchingPrompt && !userUid)
+  if (fetchingPrompt)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
         <Loader2 className="animate-spin text-emerald-500 mb-4" size={40} />
-        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.5em]">
-          Cargando Lab de Escritura...
+        <p className="text-emerald-400 text-[11px] font-bold italic tracking-[0.4em] uppercase">
+          Iniciando protocolo writing...
         </p>
       </div>
     );
@@ -200,7 +167,7 @@ export default function ProfessionalWritingPage() {
           <Link
             href="/modulos"
             className="p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-xl border border-white/5"
-            aria-label="Volver a módulos"
+            title="Volver"
           >
             <ArrowLeft size={20} />
           </Link>
@@ -209,11 +176,11 @@ export default function ProfessionalWritingPage() {
               W
             </div>
             <div>
-              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 block leading-none mb-1">
+              <span className="text-[9px] font-bold italic tracking-[0.3em] text-emerald-400 block leading-none mb-1">
                 Certifica_AI
               </span>
-              <h1 className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight text-white">
-                WRITING_LAB
+              <h1 className="text-sm font-black italic uppercase tracking-tight text-white">
+                Writing_Lab
               </h1>
             </div>
           </div>
@@ -221,17 +188,18 @@ export default function ProfessionalWritingPage() {
 
         <div className="flex gap-4 items-center">
           <div className="hidden md:flex flex-col items-end mr-4">
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+            <span className="text-[9px] font-bold text-slate-500 italic uppercase tracking-widest">
               Target_Level
             </span>
-            <span className="text-xs font-bold text-emerald-400 uppercase italic">
+            <span className="text-xs font-black text-emerald-400 uppercase italic">
               {selectedLevel}
             </span>
           </div>
           <button
             onClick={handleSubmit}
-            disabled={loading || fetchingPrompt || text.length < 5}
-            className="px-8 py-3 bg-white hover:bg-emerald-400 text-[#020617] text-[11px] font-black uppercase tracking-widest rounded-full transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
+            disabled={loading || text.length < 5}
+            title="Analizar texto"
+            className="px-8 py-3 bg-white hover:bg-emerald-400 text-[#020617] text-[11px] font-black italic uppercase tracking-widest rounded-full transition-all disabled:opacity-20 flex items-center gap-2 active:scale-95"
           >
             {loading ? (
               <Loader2 className="animate-spin" size={14} />
@@ -251,16 +219,19 @@ export default function ProfessionalWritingPage() {
             animate={{ opacity: 1, x: 0 }}
             className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden shadow-2xl"
           >
-            <h3 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-2 italic">
-              Neural_Prompt
+            <div className="absolute top-0 right-0 p-4 opacity-5">
+              <Sparkles size={60} className="text-emerald-400" />
+            </div>
+            <h3 className="text-[10px] font-bold text-emerald-400 italic uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+              Neural_Prompt_v2
             </h3>
             <p className="text-2xl font-black leading-tight text-white italic tracking-tight mb-8">
               &quot;{prompt}&quot;
             </p>
             <button
               onClick={() => fetchPrompt(selectedLevel)}
-              title="Cambiar tema"
-              aria-label="Recargar nuevo prompt"
+              title="Generar nuevo tema"
+              aria-label="Recargar prompt"
               className="p-2 text-slate-400 hover:text-emerald-400 transition-colors bg-white/5 rounded-lg border border-white/5"
             >
               <RotateCcw size={16} />
@@ -268,10 +239,10 @@ export default function ProfessionalWritingPage() {
           </motion.div>
 
           <div className="bg-emerald-500/5 p-8 rounded-3xl border border-emerald-500/10 text-center">
-            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-1">
-              Palabras
+            <span className="text-[10px] font-bold text-emerald-400 italic uppercase tracking-widest block mb-1">
+              Word_Count
             </span>
-            <span className="text-6xl font-black text-white italic">
+            <span className="text-6xl font-black text-white italic tracking-tighter">
               {wordCount}
             </span>
           </div>
@@ -284,56 +255,56 @@ export default function ProfessionalWritingPage() {
             className="bg-slate-900/40 rounded-[3rem] border border-white/5 overflow-hidden min-h-[600px] flex flex-col focus-within:border-emerald-500/30 transition-all shadow-3xl"
           >
             <div className="px-10 py-5 bg-white/5 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black tracking-widest uppercase italic">
+              <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold italic tracking-widest uppercase">
                 <FileText size={14} className="text-emerald-400" />{" "}
-                Professional_Editor_v2.0
+                Professional_Editor
               </div>
             </div>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="flex-1 w-full p-12 text-xl leading-relaxed text-white outline-none resize-none bg-transparent custom-scrollbar font-medium"
-              placeholder="Escribe tu respuesta aquí..."
+              title="Cuerpo del texto"
+              placeholder="Start drafting your response here..."
+              className="flex-1 w-full p-12 text-lg leading-relaxed text-slate-200 outline-none resize-none bg-transparent custom-scrollbar font-medium"
             />
           </motion.div>
         </div>
       </main>
 
+      {/* MODAL DE RESULTADOS (Simplificado para brevedad) */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/95 backdrop-blur-2xl">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#0f172a] border border-emerald-500/20 rounded-[4rem] p-12 max-w-xl w-full text-center relative shadow-3xl"
+              className="bg-[#0f172a] border border-emerald-500/20 rounded-[4rem] p-12 max-w-2xl w-full text-center relative shadow-3xl"
             >
               <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20">
                 <CheckCircle2 size={40} />
               </div>
-              <h2 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.5em] mb-4 italic">
-                Writing_Analysis_Score
+              <h2 className="text-[10px] font-bold text-emerald-400 italic uppercase tracking-[0.4em] mb-4">
+                Análisis_Finalizado
               </h2>
               <div className="text-8xl font-black text-white italic tracking-tighter mb-8">
                 {result?.score}
                 <span className="text-3xl text-emerald-400">%</span>
               </div>
-              <div className="bg-white/5 p-8 rounded-3xl text-left border border-white/5 mb-10 max-h-48 overflow-y-auto">
-                <p className="text-sm text-slate-300 leading-relaxed italic">
-                  &quot;{result?.feedback}&quot;
-                </p>
-              </div>
-              <div className="flex flex-col gap-4">
+              <p className="text-base text-slate-300 leading-relaxed italic mb-10">
+                &quot;{result?.feedback}&quot;
+              </p>
+              <div className="flex gap-4">
                 <button
-                  onClick={handleRetry}
-                  className="w-full py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest"
                 >
-                  Intentar nuevo tema
+                  Cerrar
                 </button>
                 <button
                   onClick={() => router.push("/modulos")}
-                  className="w-full py-6 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-transform"
+                  className="flex-1 py-5 bg-emerald-600 text-[#020617] rounded-2xl font-black uppercase text-[11px] tracking-widest"
                 >
-                  Finalizar y Volver
+                  Finalizar
                 </button>
               </div>
             </motion.div>
