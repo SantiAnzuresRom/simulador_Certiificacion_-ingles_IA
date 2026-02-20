@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -11,10 +11,10 @@ import {
   MoreHorizontal,
   Search,
   ShieldCheck,
-  UserCog, // Importamos este para el botón de control
+  UserCog,
   Users,
 } from "lucide-react";
-import Link from "next/link"; // Necesario para la navegación
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { db } from "../src/firebase/config";
 
@@ -24,10 +24,8 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const q = query(
-      collection(db, "user_progress"),
-      orderBy("updatedAt", "desc"),
-    );
+    // Apuntamos a "users" para ver a todos los registrados
+    const q = query(collection(db, "users"));
 
     const unsubscribe = onSnapshot(
       q,
@@ -51,8 +49,10 @@ export default function AdminDashboard() {
   const filteredUsers = users.filter(
     (u) =>
       u.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.currentLevel &&
-        u.currentLevel.toLowerCase().includes(searchTerm.toLowerCase())),
+      (u.nombre || u.full_name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (u.nivelingles || "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading) {
@@ -65,14 +65,12 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 p-6 md:p-10 selection:bg-cyan-500/30">
-      {/* BACKGROUND DECOR */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-600/5 blur-[120px] rounded-full" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/5 blur-[120px] rounded-full" />
       </div>
 
       <main className="max-w-7xl mx-auto relative z-10 space-y-10">
-        {/* HEADER SECTION */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -90,7 +88,6 @@ export default function AdminDashboard() {
           </motion.div>
 
           <div className="flex flex-wrap items-center gap-4">
-            {/* --- BOTÓN DE CONTROL DE USUARIOS (TERMINATION PROTOCOL) --- */}
             <Link href="/Adashboard/control">
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -128,7 +125,6 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* METRICS GRID (Igual que antes...) */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
             {
@@ -186,9 +182,8 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* MAIN DATABASE TABLE (Igual que antes...) */}
         <section className="bg-slate-900/20 border border-white/5 rounded-[50px] overflow-hidden backdrop-blur-2xl shadow-2xl">
-          <div className="p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+          <div className="p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
               <h2 className="text-xl font-black italic text-white uppercase tracking-tight">
                 Student_Database_v1.0
@@ -197,7 +192,6 @@ export default function AdminDashboard() {
                 Logs de progreso y actividad neural
               </p>
             </div>
-
             <div className="relative w-full md:w-80">
               <Search
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600"
@@ -205,7 +199,7 @@ export default function AdminDashboard() {
               />
               <input
                 type="text"
-                placeholder="BUSCAR UID O NIVEL..."
+                placeholder="BUSCAR NOMBRE O NIVEL..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-950/50 border border-white/10 rounded-full py-3 pl-12 pr-6 text-[10px] font-bold text-white focus:outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-700 uppercase tracking-widest"
@@ -218,11 +212,10 @@ export default function AdminDashboard() {
               <thead className="bg-white/[0.02] text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 border-b border-white/5">
                 <tr>
                   <th className="px-10 py-6 italic text-cyan-500/70">
-                    Unique_UID
+                    Subject_Identity
                   </th>
                   <th className="px-8 py-6">Current_Lvl</th>
-                  <th className="px-8 py-6">Last_Update</th>
-                  <th className="px-8 py-6">Neural_Status</th>
+                  <th className="px-8 py-6">Status</th>
                   <th className="px-8 py-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -235,37 +228,34 @@ export default function AdminDashboard() {
                     <td className="px-10 py-6">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-slate-300 group-hover:text-cyan-400 transition-colors tracking-tight">
-                          {u.id}
+                          {u.nombre || u.full_name || "Unknown_Subject"}
                         </span>
-                        <span className="text-[8px] text-slate-600 font-mono mt-1 uppercase tracking-tighter">
-                          PATH: /sys/usr/{u.id.substring(0, 6)}...
+                        <span className="text-[8px] text-slate-600 font-mono mt-1 uppercase tracking-tighter italic">
+                          UID: {u.id.substring(0, 12)}...
                         </span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="inline-flex items-center justify-center w-14 h-8 bg-slate-950 border border-white/10 rounded-xl text-cyan-400 text-xs font-black italic shadow-inner">
-                        {u.currentLevel || "A1"}
+                      <div className="inline-flex items-center justify-center w-14 h-8 bg-slate-950 border border-white/10 rounded-xl text-cyan-400 text-xs font-black italic">
+                        {u.nivelingles || "A1"}
                       </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                        {u.updatedAt
-                          ? new Date(u.updatedAt).toLocaleDateString()
-                          : "No_Sync"}
-                      </span>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)] animate-pulse" />
-                        <span className="text-[9px] font-black text-cyan-500 uppercase tracking-[0.2em] italic">
-                          Synchronized
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full animate-pulse ${u.access_blocked ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"}`}
+                        />
+                        <span
+                          className={`text-[9px] font-black uppercase tracking-[0.2em] italic ${u.access_blocked ? "text-red-500" : "text-emerald-500"}`}
+                        >
+                          {u.access_blocked ? "TERMINATED" : "ACTIVE"}
                         </span>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
                       <button
                         aria-label="Más opciones"
-                        className="p-2 hover:bg-cyan-500/10 rounded-lg transition-all text-slate-500 hover:text-cyan-400 active:scale-90"
+                        className="p-2 hover:bg-cyan-500/10 rounded-lg transition-all text-slate-500 hover:text-cyan-400"
                       >
                         <MoreHorizontal size={18} />
                       </button>

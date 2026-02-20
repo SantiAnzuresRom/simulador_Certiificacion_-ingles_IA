@@ -5,6 +5,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Calendar,
@@ -19,7 +20,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { auth } from "../src/firebase/config";
+import { auth, db } from "../src/firebase/config"; // Importamos db para Firestore
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
@@ -27,7 +28,6 @@ const BACKEND_URL =
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [otp, setOtp] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -44,6 +44,7 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // PASO 1: Enviar OTP vía Backend
   const handleInitialSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
@@ -72,6 +73,7 @@ export default function RegisterPage() {
     }
   };
 
+  // PASO 2: Verificar OTP y Guardar en Auth + Firestore + Backend
   const handleVerifyAndRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 8) {
@@ -81,6 +83,7 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
+      // 1. Verificar OTP en Backend
       const verifyRes = await fetch(`${BACKEND_URL}/api/v1/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,45 +94,73 @@ export default function RegisterPage() {
       });
 
       if (verifyRes.ok) {
+        // 2. Crear usuario en Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           formData.email.trim().toLowerCase(),
           formData.password,
         );
 
-        const registerRes = await fetch(
-          `${BACKEND_URL}/api/v1/users/register`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              uid: userCredential.user.uid,
-              full_name: formData.fullName,
-              email: formData.email.trim().toLowerCase(),
-              phone: formData.phone || "",
-              birth_date: formData.birthDate,
-            }),
-          },
-        );
+        const uid = userCredential.user.uid;
 
-        if (registerRes.ok) {
-          router.replace("/dashboard");
-        }
+        // 3. Sincronizar con Firestore (Colección 'users')
+        await setDoc(doc(db, "users", uid), {
+          nombre: formData.fullName,
+          correo: formData.email.trim().toLowerCase(),
+          telefono: formData.phone || "",
+          nacimiento: formData.birthDate,
+          nivelingles: "A1", // Nivel inicial por defecto
+          average_score: "0",
+          total_exams: "0",
+          created_at: new Date().toISOString(),
+        });
+
+        // 4. Registrar en Base de Datos SQL vía Backend
+        await fetch(`${BACKEND_URL}/api/v1/users/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: uid,
+            full_name: formData.fullName,
+            email: formData.email.trim().toLowerCase(),
+            phone: formData.phone || "",
+            birth_date: formData.birthDate,
+          }),
+        });
+
+        router.replace("/dashboard");
       } else {
         alert("Código incorrecto o expirado, bro.");
       }
     } catch (error) {
+      console.error(error);
       alert("Ocurrió un error en el registro final.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // REGISTRO CON GOOGLE
   const handleGoogleRegister = async () => {
     const provider = new GoogleAuthProvider();
     setIsLoading(true);
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Guardamos en Firestore (si ya existe, actualiza con merge)
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          nombre: user.displayName || "Sin nombre",
+          correo: user.email,
+          telefono: user.phoneNumber || "",
+          nivelingles: "A1",
+          created_at: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+
       router.replace("/dashboard");
     } catch (error) {
       console.error(error);
@@ -139,12 +170,12 @@ export default function RegisterPage() {
     }
   };
 
-  // Clase CSS para inputs con texto NEGRO y placeholders visibles
   const inputClass =
     "w-full rounded-2xl border border-slate-200 px-12 py-3 text-xs font-bold text-black placeholder:text-slate-500 focus:outline-none focus:border-slate-400 transition-colors";
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#f8fafc] px-6 overflow-hidden">
+      {/* DECORACIÓN */}
       <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-[#87CEEB]/20 blur-[100px]" />
       <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] rounded-full bg-blue-100/40 blur-[100px]" />
 
@@ -175,7 +206,7 @@ export default function RegisterPage() {
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Facebook"
+                aria-label="Facebook"
                 className="group"
               >
                 <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center transition-all group-hover:bg-[#1877F2]">
@@ -189,7 +220,7 @@ export default function RegisterPage() {
                 href="https://tiktok.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="TikTok"
+                aria-label="TikTok"
                 className="group"
               >
                 <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center transition-all group-hover:bg-white group-hover:text-black">
@@ -226,7 +257,7 @@ export default function RegisterPage() {
                       name="fullName"
                       type="text"
                       placeholder="Nombre completo"
-                      title="Nombre completo"
+                      aria-label="Nombre completo"
                       required
                       value={formData.fullName}
                       onChange={handleChange}
@@ -239,7 +270,7 @@ export default function RegisterPage() {
                       name="email"
                       type="email"
                       placeholder="Correo electrónico"
-                      title="Correo electrónico"
+                      aria-label="Correo electrónico"
                       required
                       value={formData.email}
                       onChange={handleChange}
@@ -253,7 +284,7 @@ export default function RegisterPage() {
                         name="phone"
                         type="tel"
                         placeholder="Teléfono"
-                        title="Teléfono"
+                        aria-label="Teléfono"
                         value={formData.phone}
                         onChange={handleChange}
                         className={inputClass}
@@ -264,11 +295,11 @@ export default function RegisterPage() {
                       <input
                         name="birthDate"
                         type="date"
-                        title="Fecha de nacimiento"
+                        aria-label="Fecha de nacimiento"
                         required
                         value={formData.birthDate}
                         onChange={handleChange}
-                        className={`${inputClass} text-black`}
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -276,11 +307,24 @@ export default function RegisterPage() {
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
                     <input
                       name="password"
-                      type={showPassword ? "text" : "password"}
+                      type="password"
                       placeholder="Contraseña"
-                      title="Contraseña"
+                      aria-label="Contraseña"
                       required
                       value={formData.password}
+                      onChange={handleChange}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Confirmar Contraseña"
+                      aria-label="Confirmar Contraseña"
+                      required
+                      value={formData.confirmPassword}
                       onChange={handleChange}
                       className={inputClass}
                     />
@@ -310,6 +354,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={handleGoogleRegister}
+                  aria-label="Registrarse con Google"
                   className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-2xl w-full text-[10px] font-black text-black hover:bg-slate-50 transition-all"
                 >
                   <Image src="/google.svg" alt="G" width={16} height={16} />{" "}
@@ -317,7 +362,6 @@ export default function RegisterPage() {
                 </button>
               </motion.div>
             ) : (
-              /* PASO 2: OTP */
               <motion.div
                 key="otp"
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -325,23 +369,28 @@ export default function RegisterPage() {
                 className="text-center"
               >
                 <ShieldCheck size={48} className="mx-auto text-blue-500 mb-4" />
-                <h2 className="text-xl font-black mb-4 text-black">
-                  VERIFICA TU CORREO
+                <h2 className="text-xl font-black mb-4 text-black uppercase">
+                  Verifica tu correo
                 </h2>
                 <form onSubmit={handleVerifyAndRegister}>
                   <input
                     type="text"
                     maxLength={8}
-                    title="Código OTP"
+                    aria-label="Código de verificación"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                     className="w-full text-center text-3xl font-black py-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl mb-4 text-black focus:border-slate-400 focus:outline-none"
                   />
                   <button
                     type="submit"
+                    disabled={isLoading}
                     className="w-full rounded-2xl bg-slate-900 py-4 text-white font-black uppercase tracking-widest hover:bg-black transition-colors"
                   >
-                    Finalizar Registro
+                    {isLoading ? (
+                      <Loader2 className="animate-spin mx-auto" />
+                    ) : (
+                      "Finalizar Registro"
+                    )}
                   </button>
                 </form>
               </motion.div>
