@@ -3,13 +3,14 @@
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
-  Award,
+  ArrowLeft,
   BookOpen,
   Headphones,
   Mic,
   PenTool,
   Sparkles,
+  LayoutDashboard,
+  Target
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,30 +45,20 @@ export default function ResultsPage() {
 
       const moduleKey = `modules_${level}`;
       const scores = progress[moduleKey] || {
-        reading: 0,
-        writing: 0,
-        listening: 0,
-        speaking: 0,
+        reading: 0, writing: 0, listening: 0, speaking: 0,
       };
 
       const res = await fetch("http://127.0.0.1:8000/api/v1/generate-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...scores,
-          level: level,
-        }),
+        body: JSON.stringify({ ...scores, level: level }),
       });
 
       if (!res.ok) throw new Error("Backend Error");
       const data = await res.json();
-
-      setReport({
-        ...data,
-        scores: scores,
-      });
+      setReport({ ...data, scores: scores });
     } catch (e) {
-      console.error("Error generando reporte:", e);
+      console.error("Error:", e);
     } finally {
       setLoading(false);
     }
@@ -83,214 +74,168 @@ export default function ResultsPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-          className="relative mb-8 w-20 h-20 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full"
-        />
-        <p className="text-cyan-400 font-black text-[10px] uppercase tracking-[0.5em] animate-pulse">
-          Compilando Reporte Nivel {activeLevel}...
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
+        <div className="relative w-24 h-24 mb-6">
+            <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+                className="absolute inset-0 border-b-2 border-cyan-500 rounded-full"
+            />
+            <motion.div
+                animate={{ rotate: -360 }}
+                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                className="absolute inset-2 border-t-2 border-blue-500 rounded-full"
+            />
+        </div>
+        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic">
+          Sincronizando reporte {activeLevel}
         </p>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 overflow-x-hidden selection:bg-cyan-500/30">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/5 blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-5%] left-[-5%] w-[400px] h-[400px] bg-blue-600/5 blur-[120px] rounded-full" />
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 lg:p-12 overflow-x-hidden font-sans">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-5%] right-[-5%] w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[10%] left-[-5%] w-[400px] h-[400px] bg-blue-600/5 blur-[100px] rounded-full" />
       </div>
 
-      <main className="max-w-6xl mx-auto space-y-12 relative z-10">
-        <header className="text-center space-y-6">
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+      <nav className="max-w-[1400px] mx-auto flex items-center justify-between mb-12 relative z-20">
+        <Link href="/modulos">
+          <motion.button
+            whileHover={{ scale: 1.05, x: -2 }}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-sm"
           >
-            <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-6">
-              <Zap size={14} className="text-cyan-400 fill-cyan-400" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400">
-                Intelligence Report
-              </span>
+            <ArrowLeft size={16} />
+            <span className="text-[13px] font-medium italic">Volver a módulos</span>
+          </motion.button>
+        </Link>
+        
+        <Link href="/dashboard">
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            className="flex items-center gap-3 px-5 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
+          >
+            <LayoutDashboard size={18} />
+            <span className="text-[13px] font-bold italic tracking-wide">Dashboard de niveles</span>
+          </motion.button>
+        </Link>
+      </nav>
+
+      <main className="max-w-[1400px] mx-auto relative z-10">
+        <header className="mb-20 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center"
+          >
+            <div className="px-4 py-1.5 rounded-full bg-cyan-500/5 border border-cyan-500/10 mb-8 flex items-center gap-2">
+              <span className="text-[10px] tracking-[0.2em] font-bold text-cyan-400/80 italic">Análisis finalizado</span>
             </div>
-            <h1 className="text-7xl md:text-9xl font-black italic uppercase tracking-tighter leading-none mb-4 text-white">
-              Results{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                {activeLevel}
-              </span>
-            </h1>
-            <p className="text-slate-500 font-bold uppercase tracking-[0.6em] text-[10px]">
-              Diagnóstico de Competencias AI
+
+            <div className="pb-4">
+              <h1 className="flex items-baseline justify-center gap-4">
+                <span className="text-6xl md:text-[110px] font-light italic text-slate-400 tracking-tighter leading-none">
+                  Nivel {activeLevel}
+                </span>
+              </h1>
+            </div>
+            <p className="text-slate-500 font-medium tracking-[0.5em] text-[11px] italic opacity-60">
+              Reporte integral de desempeño
             </p>
           </motion.div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* SKILLS COLUMN */}
-          <section className="lg:col-span-1 space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+          <section className="xl:col-span-4 space-y-4">
             <div className="flex items-center gap-3 mb-6 px-2">
-              <div className="w-1 h-6 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 italic">
-                Score_Matrix_v1
-              </h3>
+                <Target size={18} className="text-cyan-500" />
+                <h3 className="text-[11px] font-bold text-slate-400 tracking-widest italic">Métricas de dominio</h3>
             </div>
-
-            {[
-              {
-                name: "Reading",
-                score: report?.scores.reading,
-                icon: BookOpen,
-                color: "text-blue-400",
-                border: "group-hover:border-blue-500/50",
-              },
-              {
-                name: "Listening",
-                score: report?.scores.listening,
-                icon: Headphones,
-                color: "text-purple-400",
-                border: "group-hover:border-purple-500/50",
-              },
-              {
-                name: "Writing",
-                score: report?.scores.writing,
-                icon: PenTool,
-                color: "text-emerald-400",
-                border: "group-hover:border-emerald-500/50",
-              },
-              {
-                name: "Speaking",
-                score: report?.scores.speaking,
-                icon: Mic,
-                color: "text-orange-400",
-                border: "group-hover:border-orange-500/50",
-              },
-            ].map((m, i) => (
-              <motion.div
-                key={i}
-                initial={{ x: -20, opacity: 0 }}
-                whileInView={{ x: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className={`bg-slate-900/40 backdrop-blur-xl border border-white/5 p-6 rounded-[30px] flex items-center justify-between group transition-all duration-500 ${m.border}`}
-              >
-                <div className="flex items-center gap-5">
-                  <div
-                    className={`p-4 rounded-2xl bg-slate-950 border border-white/5 transition-all group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] ${m.color}`}
-                  >
-                    <m.icon size={22} />
-                  </div>
-                  <div>
-                    <span className="font-black uppercase text-[10px] tracking-widest text-slate-500 block mb-1">
-                      {m.name}
-                    </span>
-                    <div className="h-1 w-24 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${m.score}%` }}
-                        transition={{ duration: 1.5, delay: 0.5 }}
-                        className={`h-full ${m.color.replace("text", "bg")}`}
-                      />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
+              {[
+                { name: "Reading", score: report?.scores.reading, icon: BookOpen, color: "from-blue-500/20 to-blue-600/5", stroke: "text-blue-400" },
+                { name: "Listening", score: report?.scores.listening, icon: Headphones, color: "from-purple-500/20 to-purple-600/5", stroke: "text-purple-400" },
+                { name: "Writing", score: report?.scores.writing, icon: PenTool, color: "from-emerald-500/20 to-emerald-600/5", stroke: "text-emerald-400" },
+                { name: "Speaking", score: report?.scores.speaking, icon: Mic, color: "from-orange-500/20 to-orange-600/5", stroke: "text-orange-400" },
+              ].map((m, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl group hover:border-white/10 transition-all shadow-lg"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-xl bg-gradient-to-br ${m.color} border border-white/5 ${m.stroke}`}>
+                        <m.icon size={18} />
+                      </div>
+                      <span className="font-bold text-[14px] text-slate-300 italic">{m.name}</span>
                     </div>
+                    <span className="text-2xl font-black italic text-white/90">{m.score}%</span>
                   </div>
-                </div>
-                <span className="text-3xl font-black italic text-white group-hover:text-cyan-400 transition-colors">
-                  {m.score}%
-                </span>
-              </motion.div>
-            ))}
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      whileInView={{ width: `${m.score}%` }}
+                      transition={{ duration: 1.5, ease: "circOut" }}
+                      className={`h-full bg-gradient-to-r ${m.stroke.replace("text", "from")} to-transparent`}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </section>
 
-          {/* AI FEEDBACK COLUMN */}
-          <section className="lg:col-span-2 space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 p-12 rounded-[50px] relative overflow-hidden group"
+          <section className="xl:col-span-8 space-y-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-gradient-to-br from-slate-900/60 to-slate-900/20 backdrop-blur-2xl border border-white/10 p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
-              <Sparkles
-                className="absolute -top-10 -right-10 text-cyan-500/5 group-hover:text-cyan-500/10 transition-colors rotate-12"
-                size={250}
-              />
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Sparkles size={120} className="text-cyan-400" />
+              </div>
 
-              <h2 className="text-3xl font-black italic uppercase mb-8 flex items-center gap-4 text-white">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                  <Sparkles className="text-cyan-400" size={20} />
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
                 </div>
-                Diagnostic_Feedback
-              </h2>
+                <h2 className="text-xl font-bold italic tracking-tight text-white/80">Recomendación estratégica</h2>
+              </div>
 
-              <p className="text-slate-200 text-xl leading-relaxed font-medium mb-12 italic border-l-4 border-cyan-500/30 pl-8 bg-cyan-500/5 py-4 rounded-r-2xl">
-                &quot;{report?.ai_advice}&quot;
-              </p>
+              <div className="relative z-10">
+                <blockquote className="text-xl md:text-3xl font-medium italic text-slate-100 leading-tight mb-12 max-w-3xl">
+                  &quot;{report?.ai_advice}&quot;
+                </blockquote>
 
-              <div className="grid md:grid-cols-3 gap-6">
-                {report?.steps.map((step, i) => (
-                  <div
-                    key={i}
-                    className="bg-slate-950/50 p-6 rounded-3xl border border-white/5 hover:border-cyan-500/30 transition-all group/step hover:bg-slate-950"
-                  >
-                    <div className="text-cyan-500 font-black mb-4 text-[10px] tracking-widest uppercase">
-                      Step_0{i + 1}
-                    </div>
-                    <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-tighter italic">
-                      {step}
-                    </p>
-                  </div>
-                ))}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                  {report?.steps.map((step, i) => (
+                    <motion.div
+                      key={i}
+                      whileHover={{ y: -5 }}
+                      className="bg-white/5 border border-white/5 p-6 rounded-[28px] hover:bg-white/[0.08] transition-all"
+                    >
+                      <div className="text-cyan-500 font-bold text-[10px] tracking-widest mb-3 opacity-50 italic">
+                        Fase 0{i + 1}
+                      </div>
+                      <p className="text-[14px] font-medium text-slate-300 leading-relaxed italic">
+                        {step}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </motion.div>
-
-            {/* ACTION CARD */}
-            <Link href="/dashboard" className="block group">
-              <motion.div
-                whileHover={{ scale: 1.01, translateY: -5 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full relative overflow-hidden p-8 rounded-[40px] bg-gradient-to-br from-[#132448] to-[#1e3a5f] text-white transition-all shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/10 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-6 relative z-10">
-                  <div className="w-14 h-14 bg-slate-950/60 backdrop-blur-md rounded-[20px] text-white flex items-center justify-center border border-white/10 group-hover:border-cyan-400/50 transition-all">
-                    <Award size={28} className="text-cyan-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-cyan-400/70 mb-1">
-                      Entrenamiento Finalizado
-                    </p>
-                    <h4 className="text-2xl font-black uppercase italic tracking-tighter">
-                      Volver al Centro de Mando
-                    </h4>
-                  </div>
-                </div>
-                <div className="bg-white/5 p-4 rounded-full border border-white/5 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-all duration-300 shadow-xl">
-                  <ArrowRight
-                    size={24}
-                    className="group-hover:translate-x-2 transition-transform"
-                  />
-                </div>
-              </motion.div>
-            </Link>
           </section>
         </div>
       </main>
-    </div>
-  );
-}
 
-function Zap({ size, className }: { size: number; className?: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
+      <footer className="max-w-[1400px] mx-auto mt-20 pt-8 border-t border-white/5 text-center">
+        <p className="text-[10px] font-medium text-slate-600 tracking-[0.3em] italic">Core Engine v3.0 // 2026</p>
+      </footer>
+    </div>
   );
 }

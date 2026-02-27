@@ -88,13 +88,37 @@ export default function SpeakingModule() {
       typeof window !== "undefined" &&
       ((window as any).SpeechRecognition ||
         (window as any).webkitSpeechRecognition);
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.lang = "en-US";
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.onresult = (e: any) =>
-        setTranscript(e.results[0][0].transcript);
-      recognitionRef.current.onend = () => setIsRecording(false);
+        
+    if (SpeechRecognition && !recognitionRef.current) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      
+      // FIX 1: continuous=true para que no se detenga al primer silencio
+      recognition.continuous = true; 
+      
+      // FIX 2: interimResults=true para que veas el texto MIENTRAS hablas
+      recognition.interimResults = true;
+
+      recognition.onresult = (e: any) => {
+        let finalTranscript = "";
+        for (let i = e.resultIndex; i < e.results.length; ++i) {
+          if (e.results[i].isFinal) {
+            finalTranscript += e.results[i][0].transcript;
+          } else {
+            // Esto permite que el usuario vea lo que está diciendo en tiempo real
+            const interim = e.results[i][0].transcript;
+            setTranscript(interim); 
+          }
+        }
+        if (finalTranscript) setTranscript(finalTranscript);
+      };
+
+      recognition.onend = () => {
+        // No cambiamos el estado aquí si fue un corte accidental, 
+        // pero para tu botón usamos el estado setIsRecording controlado.
+      };
+
+      recognitionRef.current = recognition;
     }
 
     return () => unsub();
@@ -131,12 +155,20 @@ export default function SpeakingModule() {
   const handleEvaluate = async () => {
     if (!transcript || !task || !userUid) return;
 
+    // Detenemos el micro antes de evaluar
+    recognitionRef.current?.stop();
+    setIsRecording(false);
+
     const target = task.targetSentence.toLowerCase().replace(/[^\w\s]/g, "");
     const input = transcript.toLowerCase().replace(/[^\w\s]/g, "");
-    const targetWords = target.split(" ");
-    const matches = input
-      .split(" ")
-      .filter((w) => targetWords.includes(w)).length;
+    const targetWords = target.split(/\s+/).filter(Boolean);
+    const inputWords = input.split(/\s+/).filter(Boolean);
+    
+    let matches = 0;
+    targetWords.forEach(word => {
+      if (inputWords.includes(word)) matches++;
+    });
+
     const finalScore = Math.min(
       100,
       Math.round((matches / targetWords.length) * 100),
@@ -243,8 +275,10 @@ export default function SpeakingModule() {
             </AnimatePresence>
             <button
               onClick={() => {
-                if (isRecording) recognitionRef.current?.stop();
-                else {
+                if (isRecording) {
+                  recognitionRef.current?.stop();
+                  setIsRecording(false);
+                } else {
                   setTranscript("");
                   recognitionRef.current?.start();
                   setIsRecording(true);
