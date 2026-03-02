@@ -38,7 +38,7 @@ export default function DashboardPage() {
       }
 
       setUserData({
-        name: user.displayName || "Estudiante",
+        name: user.displayName || "estudiante",
         email: user.email || "",
         uid: user.uid,
       });
@@ -91,7 +91,7 @@ export default function DashboardPage() {
       setLevel(lvl);
       router.push("/modulos");
     } catch (error) {
-      console.error("Sync Error:", error);
+      console.error("sync error:", error);
     }
   };
 
@@ -106,17 +106,32 @@ export default function DashboardPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-          className="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full"
-        />
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
+        <div className="relative w-24 h-24 mb-6">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+            className="absolute inset-0 border-b-2 border-cyan-500 rounded-full"
+          />
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+            className="absolute inset-2 border-t-2 border-blue-500 rounded-full"
+          />
+        </div>
+        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic">
+          cargando sistema de control
+        </p>
       </div>
     );
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+      <style jsx global>{`
+        ::-webkit-scrollbar { display: none; }
+        body { scrollbar-width: none; }
+      `}</style>
+
       {/* Luces Ambientales */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/5 blur-[120px] rounded-full" />
@@ -134,10 +149,10 @@ export default function DashboardPage() {
               </div>
             </div>
             <div>
-              <span className="text-[9px] font-black tracking-[0.5em] text-cyan-500 mb-1 block uppercase italic">
-                Neural Active
+              <span className="text-[10px] font-medium tracking-[0.4em] text-cyan-500 mb-2 block italic">
+                neural_active_session
               </span>
-              <h1 className="text-4xl font-black text-white italic tracking-tighter leading-none">
+              <h1 className="text-4xl md:text-5xl font-light text-white italic tracking-tighter leading-none">
                 {userData.name}
               </h1>
             </div>
@@ -145,16 +160,16 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-8 mt-8 md:mt-0 px-8 py-4 bg-slate-950/50 rounded-2xl border border-white/5">
             <div className="text-center pr-8 border-r border-white/10">
-              <p className="text-[9px] font-black text-slate-500 tracking-widest uppercase mb-1">
-                Rank
+              <p className="text-[10px] font-medium text-slate-500 tracking-widest mb-1 italic">
+                rank
               </p>
-              <p className="text-2xl font-black text-white italic">#042</p>
+              <p className="text-2xl font-light text-white italic">#042</p>
             </div>
             <div className="text-center">
-              <p className="text-[9px] font-black text-cyan-500 tracking-widest uppercase mb-1">
-                Target
+              <p className="text-[10px] font-medium text-cyan-500 tracking-widest mb-1 italic">
+                target_level
               </p>
-              <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400 italic leading-none">
+              <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-400 italic leading-none uppercase">
                 {level}
               </p>
             </div>
@@ -169,11 +184,11 @@ export default function DashboardPage() {
                 <Target className="text-cyan-400" size={22} />
               </div>
               <div>
-                <h2 className="text-sm font-black tracking-widest text-white uppercase italic">
-                  Niveles de Entrenamiento
+                <h2 className="text-lg font-light tracking-tight text-white italic">
+                  niveles de entrenamiento
                 </h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
-                  Selecciona tu rango de certificación actual
+                <p className="text-[11px] text-slate-500 tracking-wide italic opacity-80">
+                  selecciona tu rango de certificación actual para iniciar la fase
                 </p>
               </div>
             </div>
@@ -185,15 +200,15 @@ export default function DashboardPage() {
                   whileHover={{ scale: 1.03, y: -5 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => handleLevelSelect(lvl)}
-                  className={`group relative h-36 rounded-[35px] border-2 transition-all duration-300 flex items-center justify-center
+                  className={`group relative h-36 rounded-[35px] border transition-all duration-300 flex items-center justify-center
                     ${
                       level === lvl
-                        ? "border-cyan-500/50 bg-cyan-500/10 shadow-[0_0_30px_rgba(6,182,212,0.1)]"
-                        : "border-white/5 bg-slate-950/40 hover:border-white/20"
+                        ? "border-cyan-500/40 bg-cyan-500/5 shadow-[0_0_30px_rgba(6,182,212,0.1)]"
+                        : "border-white/5 bg-slate-950/40 hover:border-white/10"
                     }`}
                 >
                   <span
-                    className={`text-5xl font-black italic transition-all 
+                    className={`text-5xl font-light italic transition-all 
                     ${level === lvl ? "text-white scale-110" : "text-slate-700 group-hover:text-slate-400"}`}
                   >
                     {lvl}
@@ -211,37 +226,37 @@ export default function DashboardPage() {
           {/* Barra Lateral / Progreso */}
           <aside className="lg:col-span-4 space-y-6">
             <motion.button
-              whileHover={{ scale: 1.02, x: 5 }}
+              whileHover={{ y: -2 }}
               onClick={() => router.push("/results")}
-              className="w-full p-8 rounded-[40px] bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 flex items-center justify-between group shadow-xl"
+              className="w-full p-8 rounded-[40px] bg-white/5 border border-white/10 flex items-center justify-between group backdrop-blur-md transition-all hover:bg-white/10"
             >
               <div className="flex items-center gap-5">
-                <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center group-hover:bg-cyan-500 group-hover:text-slate-950 transition-all">
+                <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center group-hover:bg-cyan-500 group-hover:text-slate-950 transition-all shadow-lg">
                   <Award
                     size={24}
                     className="text-cyan-400 group-hover:text-inherit"
                   />
                 </div>
                 <div className="text-left">
-                  <p className="text-[8px] font-black tracking-[0.3em] text-slate-500 uppercase italic">
-                    Analysis_Center
+                  <p className="text-[10px] font-medium tracking-[0.2em] text-slate-500 mb-1 italic">
+                    analysis_center
                   </p>
-                  <h4 className="text-lg font-black italic text-white tracking-tighter">
-                    Ver Reporte AI
+                  <h4 className="text-lg font-light italic text-white tracking-tight">
+                    ver reporte ai
                   </h4>
                 </div>
               </div>
               <ArrowRight
                 size={18}
-                className="text-slate-600 group-hover:text-white group-hover:translate-x-2 transition-all"
+                className="text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all"
               />
             </motion.button>
 
             <div className="bg-slate-900/40 border border-white/5 rounded-[40px] p-8 backdrop-blur-md">
               <div className="flex items-center gap-3 mb-8">
                 <BarChart3 className="text-cyan-500" size={18} />
-                <h3 className="text-[9px] font-black tracking-[0.4em] text-slate-400 uppercase italic">
-                  Progreso Global
+                <h3 className="text-[10px] font-medium tracking-[0.3em] text-slate-400 italic">
+                  progreso_global
                 </h3>
               </div>
 
@@ -250,15 +265,15 @@ export default function DashboardPage() {
                   <div key={item.lvl} className="group">
                     <div className="flex justify-between items-center mb-2 px-1">
                       <span
-                        className={`text-[10px] font-black italic tracking-widest ${level === item.lvl ? "text-cyan-400" : "text-slate-600"}`}
+                        className={`text-[11px] font-medium italic tracking-widest ${level === item.lvl ? "text-cyan-400" : "text-slate-600"}`}
                       >
-                        LVL_{item.lvl}
+                        lvl_{item.lvl}
                       </span>
-                      <span className="text-[9px] font-black text-white/70">
+                      <span className="text-[10px] font-bold text-white/50 italic">
                         {item.progress}%
                       </span>
                     </div>
-                    <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${item.progress}%` }}

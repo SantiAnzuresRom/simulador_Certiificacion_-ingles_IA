@@ -84,7 +84,7 @@ export default function ModulosPage() {
   const modulos = [
     {
       id: "reading",
-      title: "reading",
+      title: "Reading",
       icon: <BookOpen size={24} />,
       path: "/modulos/reading",
       color: "from-sky-400 to-blue-600",
@@ -93,7 +93,7 @@ export default function ModulosPage() {
     },
     {
       id: "listening",
-      title: "listening",
+      title: "Listening",
       icon: <Headphones size={24} />,
       path: "/modulos/listening",
       color: "from-blue-500 to-indigo-600",
@@ -102,7 +102,7 @@ export default function ModulosPage() {
     },
     {
       id: "writing",
-      title: "writing",
+      title: "Writing",
       icon: <PenTool size={24} />,
       path: "/modulos/writing",
       color: "from-emerald-400 to-teal-600",
@@ -111,7 +111,7 @@ export default function ModulosPage() {
     },
     {
       id: "speaking",
-      title: "speaking",
+      title: "Speaking",
       icon: <Mic2 size={24} />,
       path: "/modulos/speaking",
       color: "from-orange-400 to-red-600",
@@ -172,14 +172,13 @@ export default function ModulosPage() {
             </motion.div>
 
             <div className="flex items-center gap-3">
-              {/* nuevo botón de resultados */}
               <Link href="/results">
                 <motion.button
                   whileHover={{ y: -2 }}
                   className="group flex items-center gap-3 px-5 py-2.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20 backdrop-blur-md transition-all hover:bg-cyan-500/10"
                 >
                   <span className="text-[12px] font-medium text-cyan-400 group-hover:text-cyan-300 italic tracking-wide">
-                    ver resultados
+                    Ver resultados
                   </span>
                   <BarChart3 size={16} className="text-cyan-400" />
                 </motion.button>
@@ -191,7 +190,7 @@ export default function ModulosPage() {
                   className="group flex items-center gap-3 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md transition-all hover:bg-white/10"
                 >
                   <span className="text-[12px] font-medium text-slate-400 group-hover:text-white italic tracking-wide">
-                    centro de mando
+                    Dashboard de niveles
                   </span>
                   <Home size={16} className="text-slate-400 group-hover:text-white transition-colors" />
                 </motion.button>
@@ -204,7 +203,7 @@ export default function ModulosPage() {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
                 <p className="text-cyan-400/80 font-medium text-[12px] tracking-[0.2em] italic">
-                  protocolo de aprendizaje activo
+                  Protocolo de aprendizaje activo
                 </p>
               </div>
               <motion.h1
@@ -212,10 +211,10 @@ export default function ModulosPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-7xl md:text-[100px] font-light italic tracking-tighter leading-[0.9] mb-4 text-slate-100"
               >
-                módulos
+                Módulos
               </motion.h1>
               <p className="text-slate-500 font-medium tracking-wide text-sm italic opacity-80">
-                selecciona tu fase de entrenamiento para continuar
+                Selecciona tu fase de entrenamiento para continuar
               </p>
             </div>
 
@@ -274,7 +273,7 @@ export default function ModulosPage() {
                         {m.title}
                       </h2>
                       <p className="text-[13px] text-slate-500 italic font-medium">
-                        fase de entrenamiento 0{index + 1}
+                        Fase de entrenamiento 0{index + 1}
                       </p>
                     </div>
                   </div>
@@ -285,7 +284,7 @@ export default function ModulosPage() {
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-end px-1">
-                    <span className="text-[11px] font-medium text-slate-500 italic tracking-widest">progreso</span>
+                    <span className="text-[11px] font-medium text-slate-500 italic tracking-widest">Progreso</span>
                     <span className={`text-sm font-bold italic ${m.accent}`}>{m.p}%</span>
                   </div>
                   <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
