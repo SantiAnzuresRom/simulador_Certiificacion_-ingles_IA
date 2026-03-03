@@ -8,7 +8,6 @@ import {
   Award,
   Headset,
   LayoutGrid,
-  Loader2,
   Play,
   RotateCcw,
   Send,
@@ -37,7 +36,7 @@ interface ListeningTask {
 export default function ListeningModule() {
   const router = useRouter();
   const [userUid, setUserUid] = useState<string | null>(null);
-  const [currentLevel, setCurrentLevel] = useState<string>("A1");
+  const [currentLevel, setCurrentLevel] = useState<string>("--");
   const [loading, setLoading] = useState(true);
   const [task, setTask] = useState<ListeningTask | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -159,124 +158,139 @@ export default function ListeningModule() {
 
   if (loading)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <Image
-            src="/logo2.png"
-            alt="Logo"
-            width={80}
-            height={80}
-            className="mb-6"
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
+        <div className="relative w-24 h-24 mb-6">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+            className="absolute inset-0 border-b-2 border-cyan-500 rounded-full"
           />
-        </motion.div>
-        <Loader2 className="animate-spin text-cyan-500 mb-4" size={30} />
-        <p className="text-cyan-400 text-[10px] font-bold italic tracking-[0.4em]">
-          Iniciando protocolo listening...
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+            className="absolute inset-2 border-t-2 border-blue-500 rounded-full"
+          />
+        </div>
+        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic uppercase">
+          configurando entorno de {currentLevel}
         </p>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col font-sans selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+      {/* Luces Ambientales sutiles */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[5%] left-[-5%] w-[400px] h-[400px] bg-blue-600/5 blur-[100px] rounded-full" />
+      </div>
+
       <nav className="p-8 flex justify-between items-center bg-[#020617]/80 backdrop-blur-md sticky top-0 z-50 border-b border-white/5">
         <div className="flex items-center gap-6">
           <Link
             href="/modulos"
-            className="p-3 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+            className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all active:scale-95 shadow-inner"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} className="text-slate-400" />
           </Link>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-cyan-500 rounded-2xl flex items-center justify-center font-black text-2xl text-[#020617] shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+            <div className="w-11 h-11 bg-cyan-500 rounded-xl flex items-center justify-center font-black text-xl text-[#020617] shadow-lg">
               L
             </div>
             <div>
-              <p className="text-[10px] font-bold text-cyan-500 italic tracking-[0.2em] mb-1">
-                Certifica_AI
+              <p className="text-[10px] font-bold text-cyan-500 italic tracking-[0.1em] mb-1">
+                Certifica AI
               </p>
               <h1 className="text-xl font-black italic tracking-tighter flex items-center gap-2 uppercase">
-                <Headset size={18} className="text-cyan-500" /> Listening_Lab
+                <Headset size={18} className="text-cyan-500" /> Listening Lab
               </h1>
             </div>
           </div>
         </div>
-        <div className="bg-cyan-500/10 px-6 py-3 rounded-2xl border border-cyan-500/30">
-          <span className="text-[10px] font-bold text-cyan-400 italic tracking-widest uppercase">
-            Paso {currentStep + 1} / {task?.questions.length}
+        <div className="bg-slate-900 px-5 py-2.5 rounded-xl border border-white/5 shadow-inner">
+          <span className="text-[11px] font-bold text-slate-400 italic tracking-wide">
+            paso {currentStep + 1} de {task?.questions.length}
           </span>
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto w-full p-6 space-y-8 py-12">
-        <section className="bg-slate-900/40 border border-white/5 p-10 rounded-[50px] text-center relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+      <main className="max-w-5xl mx-auto w-full p-6 space-y-12 py-16 relative z-10">
+        <section className="bg-gradient-to-br from-slate-950 to-slate-900 border border-white/10 p-12 rounded-[40px] text-center relative overflow-hidden shadow-2xl group hover:border-cyan-500/20 transition-all duration-500">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent group-hover:via-cyan-500/50" />
+          
           <button
             onClick={playMainAudio}
-            className={`w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-10 transition-all ${
+            className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto mb-10 transition-all duration-300 relative ${
               isPlaying
-                ? "bg-cyan-400 scale-110 shadow-[0_0_40px_rgba(34,211,238,0.4)]"
-                : "bg-cyan-600 hover:bg-cyan-500 shadow-xl"
+                ? "bg-cyan-400 scale-105 shadow-[0_0_50px_rgba(34,211,238,0.3)]"
+                : "bg-slate-800 hover:bg-slate-700 shadow-xl border border-white/5"
             }`}
           >
+            {isPlaying && (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-[-15px] border-2 border-dashed border-cyan-500/30 rounded-full"
+              />
+            )}
+            
             {isPlaying ? (
-              <div className="flex gap-1.5 items-end h-10">
+              <div className="flex gap-1.5 items-end h-9">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <motion.div
                     key={i}
-                    animate={{ height: [12, 35, 12] }}
+                    animate={{ height: [10, 30, 10] }}
                     transition={{
-                      duration: 0.5,
+                      duration: 0.6,
                       repeat: Infinity,
                       delay: i * 0.1,
                     }}
-                    className="w-2 bg-[#020617] rounded-full"
+                    className="w-1.5 bg-[#020617] rounded-full"
                   />
                 ))}
               </div>
             ) : (
-              <Play size={50} className="ml-2 text-[#020617]" />
+              <Play size={40} className="ml-2 text-cyan-400 group-hover:text-white transition-colors" />
             )}
           </button>
-          <h2 className="text-2xl font-bold italic tracking-tight">
-            Escucha el audio y selecciona la respuesta correcta
+          
+          <h2 className="text-xl md:text-2xl font-light italic tracking-tight text-white/90 max-w-xl mx-auto">
+            Escucha atentamente el audio y selecciona la opción que mejor responda a la pregunta.
           </h2>
         </section>
 
-        <section className="space-y-8">
-          <div className="flex items-start gap-4">
-            <Sparkles size={20} className="text-cyan-400 mt-1" />
-            <h3 className="text-3xl font-black italic tracking-tighter">
+        <section className="space-y-10">
+          <div className="flex items-start gap-5">
+            <Sparkles size={22} className="text-cyan-400 mt-1.5 shrink-0" />
+            <h3 className="text-3xl md:text-4xl font-extrabold italic tracking-tighter text-white leading-tight">
               {task?.questions[currentStep].question}
             </h3>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {task?.questions[currentStep].options.map((opt, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedAnswer(i)}
-                className={`w-full p-8 rounded-[35px] border-2 text-left transition-all flex items-center gap-6 ${
+                className={`w-full p-8 rounded-3xl border transition-all duration-300 flex items-center gap-6 group ${
                   selectedAnswer === i
-                    ? "border-cyan-500 bg-cyan-500/10 scale-[1.02]"
-                    : "border-white/5 bg-slate-900/40 hover:bg-slate-900/60"
+                    ? "border-cyan-500/50 bg-cyan-500/5 shadow-[0_0_30px_rgba(6,182,212,0.1)] scale-[1.01]"
+                    : "border-white/5 bg-slate-900/40 hover:bg-slate-900/60 hover:border-white/10"
                 }`}
               >
                 <div
-                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center ${
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
                     selectedAnswer === i
-                      ? "bg-cyan-500 border-cyan-500"
-                      : "border-slate-700"
+                      ? "border-cyan-500 bg-cyan-500"
+                      : "border-slate-700 group-hover:border-slate-500"
                   }`}
                 >
                   {selectedAnswer === i && (
-                    <div className="w-3 h-3 bg-[#020617] rounded-full" />
+                    <div className="w-2.5 h-2.5 bg-[#020617] rounded-full" />
                   )}
                 </div>
                 <span
-                  className={`font-bold text-xl ${selectedAnswer === i ? "text-white" : "text-slate-500"}`}
+                  className={`font-medium text-lg tracking-tight ${selectedAnswer === i ? "text-white" : "text-slate-400 group-hover:text-slate-200"}`}
                 >
                   {opt}
                 </span>
@@ -287,48 +301,58 @@ export default function ListeningModule() {
           <button
             disabled={selectedAnswer === null}
             onClick={handleAnswer}
-            className="w-full py-8 bg-white text-[#020617] rounded-[35px] font-black italic uppercase tracking-[0.3em] disabled:opacity-10 hover:bg-cyan-400 transition-all flex items-center justify-center gap-4"
+            className="w-full py-7 bg-white text-[#020617] rounded-3xl font-black italic tracking-[0.2em] uppercase disabled:opacity-10 hover:bg-cyan-400 transition-all flex items-center justify-center gap-3.5 shadow-xl disabled:cursor-not-allowed group"
           >
-            {currentStep === task!.questions.length - 1
-              ? "Finalizar protocolo"
-              : "Siguiente fase"}
-            <Send size={20} />
+            <span className="group-hover:scale-105 transition-transform">
+              {currentStep === task!.questions.length - 1
+                ? "Finalizar protocolo"
+                : "Siguiente fase"}
+            </span>
+            <Send size={18} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </section>
       </main>
+
+      <footer className="max-w-7xl mx-auto py-12 border-t border-white/5 text-center mt-auto">
+        <p className="text-[10px] font-medium text-slate-600 tracking-[0.4em] italic uppercase">ai core engine v3.0 // 2026</p>
+      </footer>
 
       <AnimatePresence>
         {showResult && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/98 backdrop-blur-3xl">
             <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#0f172a] border border-cyan-500/20 p-14 rounded-[70px] text-center max-w-lg w-full"
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-slate-950 to-slate-900 border border-white/10 p-12 md:p-16 rounded-[60px] text-center max-w-xl w-full shadow-3xl relative overflow-hidden"
             >
-              <Award className="mx-auto text-cyan-400 mb-10" size={100} />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+              
+              <Award className="mx-auto text-cyan-400 mb-10" size={90} strokeWidth={1.5} />
+              
               <div className="flex items-center justify-center gap-4 mb-3">
                 <h2 className="text-9xl font-black italic tracking-tighter text-white">
                   {Math.round((correctCount / task!.questions.length) * 100)}
                 </h2>
-                <span className="text-5xl font-black text-cyan-500 italic">
-                  %
-                </span>
+                <span className="text-5xl font-black text-cyan-500 italic">%</span>
               </div>
-              <p className="text-cyan-500/50 text-[11px] font-bold italic tracking-[0.4em] mb-14 uppercase">
+              
+              <p className="text-cyan-500/60 text-[11px] font-bold italic tracking-[0.3em] mb-14 uppercase">
                 Evaluación verificada
               </p>
-              <div className="grid grid-cols-1 gap-5">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-12">
                 <button
                   onClick={handleRetry}
-                  className="w-full py-7 bg-white/5 border border-white/10 text-white rounded-[30px] font-bold italic uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-4 hover:bg-white/10 transition-all"
+                  className="w-full py-6 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-bold italic uppercase text-xs tracking-wider flex items-center justify-center gap-3.5 hover:bg-white/10 hover:text-white transition-all shadow-inner"
                 >
-                  <RotateCcw size={20} /> Reintentar protocolo
+                  <RotateCcw size={18} /> reintentar fase
                 </button>
                 <button
                   onClick={() => router.push("/modulos")}
-                  className="w-full py-8 bg-cyan-600 text-white rounded-[30px] font-black italic uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-cyan-500 transition-all shadow-[0_20px_40px_-10px_rgba(6,182,212,0.4)]"
+                  className="w-full py-6 bg-cyan-600 text-white rounded-2xl font-black italic uppercase text-xs tracking-wider flex items-center justify-center gap-3.5 hover:bg-cyan-500 transition-all shadow-[0_15px_30px_-5px_rgba(6,182,212,0.4)] group"
                 >
-                  <LayoutGrid size={20} /> Volver a módulos
+                  <LayoutGrid size={18} className="group-hover:rotate-6 transition-transform" /> volver a módulos
                 </button>
               </div>
             </motion.div>
