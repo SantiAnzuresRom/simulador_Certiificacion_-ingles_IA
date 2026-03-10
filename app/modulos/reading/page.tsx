@@ -157,7 +157,7 @@ export default function ReadingModule() {
           />
         </div>
         <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic">
-          analizando fuentes {currentLevel}
+          Generando contenido para leer en nivel {currentLevel}
         </p>
       </div>
     );

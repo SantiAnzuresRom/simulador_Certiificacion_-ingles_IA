@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
               alt="Logo"
               className="h-28 w-auto mx-auto mb-4 drop-shadow-md"
             />
-            {/* QUITAMOS UPPERCASE: Ahora se ve más elegante */}
+            {/*  */}
             <p className="text-slate-900/80 text-[11px] font-bold tracking-tight px-4 italic">
               Recupera tu acceso fácilmente
             </p>

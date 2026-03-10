@@ -71,8 +71,8 @@ export default function ChatBot() {
                     <Image src="/logo2.png" alt="X-Learning Logo" width={20} height={20} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">Asistente AI</span>
-                    <span className="text-[9px] text-slate-400 uppercase tracking-widest">En línea</span>
+                    <span className="text-[10px] font-black  tracking-[0.2em] text-cyan-400">Asistente AI</span>
+                    <span className="text-[9px] text-slate-400 tracking-widest">En línea</span>
                   </div>
                 </div>
 
@@ -109,7 +109,7 @@ export default function ChatBot() {
                     <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
                        <Loader2 className="animate-spin text-cyan-500" size={14} />
                     </div>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">Escribiendo...</span>
+                    <span className="text-[10px] text-slate-400  font-bold">Escribiendo...</span>
                   </div>
                 )}
               </div>

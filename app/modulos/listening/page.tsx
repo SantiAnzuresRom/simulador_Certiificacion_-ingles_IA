@@ -171,8 +171,8 @@ export default function ListeningModule() {
             className="absolute inset-2 border-t-2 border-blue-500 rounded-full"
           />
         </div>
-        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic uppercase">
-          configurando entorno de {currentLevel}
+        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic">
+           Generando contenido para escuchar en nivel {currentLevel}
         </p>
       </div>
     );
@@ -201,7 +201,7 @@ export default function ListeningModule() {
               <p className="text-[10px] font-bold text-cyan-500 italic tracking-[0.1em] mb-1">
                 Certifica AI
               </p>
-              <h1 className="text-xl font-black italic tracking-tighter flex items-center gap-2 uppercase">
+              <h1 className="text-xl font-black italic tracking-tighter flex items-center gap-2">
                 <Headset size={18} className="text-cyan-500" /> Listening Lab
               </h1>
             </div>
@@ -301,7 +301,7 @@ export default function ListeningModule() {
           <button
             disabled={selectedAnswer === null}
             onClick={handleAnswer}
-            className="w-full py-7 bg-white text-[#020617] rounded-3xl font-black italic tracking-[0.2em] uppercase disabled:opacity-10 hover:bg-cyan-400 transition-all flex items-center justify-center gap-3.5 shadow-xl disabled:cursor-not-allowed group"
+            className="w-full py-7 bg-white text-[#020617] rounded-3xl font-black italic tracking-[0.2em]  disabled:opacity-10 hover:bg-cyan-400 transition-all flex items-center justify-center gap-3.5 shadow-xl disabled:cursor-not-allowed group"
           >
             <span className="group-hover:scale-105 transition-transform">
               {currentStep === task!.questions.length - 1
@@ -314,7 +314,7 @@ export default function ListeningModule() {
       </main>
 
       <footer className="max-w-7xl mx-auto py-12 border-t border-white/5 text-center mt-auto">
-        <p className="text-[10px] font-medium text-slate-600 tracking-[0.4em] italic uppercase">ai core engine v3.0 // 2026</p>
+        <p className="text-[10px] font-medium text-slate-600 tracking-[0.4em] italic ">Ai core engine v3.0 // 2026</p>
       </footer>
 
       <AnimatePresence>
@@ -337,20 +337,20 @@ export default function ListeningModule() {
                 <span className="text-5xl font-black text-cyan-500 italic">%</span>
               </div>
               
-              <p className="text-cyan-500/60 text-[11px] font-bold italic tracking-[0.3em] mb-14 uppercase">
+              <p className="text-cyan-500/60 text-[11px] font-bold italic tracking-[0.3em] mb-14">
                 Evaluación verificada
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-12">
                 <button
                   onClick={handleRetry}
-                  className="w-full py-6 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-bold italic uppercase text-xs tracking-wider flex items-center justify-center gap-3.5 hover:bg-white/10 hover:text-white transition-all shadow-inner"
+                  className="w-full py-6 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-bold italic  text-xs tracking-wider flex items-center justify-center gap-3.5 hover:bg-white/10 hover:text-white transition-all shadow-inner"
                 >
                   <RotateCcw size={18} /> reintentar fase
                 </button>
                 <button
                   onClick={() => router.push("/modulos")}
-                  className="w-full py-6 bg-cyan-600 text-white rounded-2xl font-black italic uppercase text-xs tracking-wider flex items-center justify-center gap-3.5 hover:bg-cyan-500 transition-all shadow-[0_15px_30px_-5px_rgba(6,182,212,0.4)] group"
+                  className="w-full py-6 bg-cyan-600 text-white rounded-2xl font-black italic text-xs tracking-wider flex items-center justify-center gap-3.5 hover:bg-cyan-500 transition-all shadow-[0_15px_30px_-5px_rgba(6,182,212,0.4)] group"
                 >
                   <LayoutGrid size={18} className="group-hover:rotate-6 transition-transform" /> volver a módulos
                 </button>

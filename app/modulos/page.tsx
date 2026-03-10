@@ -304,7 +304,7 @@ export default function ModulosPage() {
       </main>
 
       <footer className="max-w-7xl mx-auto py-12 border-t border-white/5 text-center">
-        <p className="text-[10px] font-medium text-slate-600 tracking-[0.4em] italic uppercase">ai core engine v3.0 // 2026</p>
+        <p className="text-[10px] font-medium text-slate-600 tracking-[0.4em] italic">Ai core engine v3.0 // 2026</p>
       </footer>
     </div>
   );
