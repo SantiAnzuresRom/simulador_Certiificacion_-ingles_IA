@@ -87,7 +87,7 @@ export default function ResultsPage() {
                 className="absolute inset-2 border-t-2 border-blue-500 rounded-full"
             />
         </div>
-        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic">
+        <p className="text-cyan-400 font-medium text-[11px] tracking-[0.3em] animate-pulse italic">
           Sincronizando reporte {activeLevel}
         </p>
       </div>
@@ -104,53 +104,57 @@ export default function ResultsPage() {
         <Link href="/modulos">
           <motion.button
             whileHover={{ scale: 1.05, x: -2 }}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-sm"
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-sm shadow-xl"
           >
             <ArrowLeft size={16} />
-            <span className="text-[13px] font-medium italic">Volver a módulos</span>
+            <span className="text-[12px] font-bold italic">Volver a módulos</span>
           </motion.button>
         </Link>
         
         <Link href="/dashboard">
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
-            className="flex items-center gap-3 px-5 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
+            className="flex items-center gap-3 px-5 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-lg"
           >
             <LayoutDashboard size={18} />
-            <span className="text-[13px] font-bold italic tracking-wide">Dashboard de niveles</span>
+            <span className="text-[12px] font-black italic tracking-wide">Dashboard de niveles</span>
           </motion.button>
         </Link>
       </nav>
 
       <main className="max-w-[1400px] mx-auto relative z-10">
-        <header className="mb-20 text-center">
+        <header className="mb-16 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center"
           >
-            <div className="px-4 py-1.5 rounded-full bg-cyan-500/5 border border-cyan-500/10 mb-8 flex items-center gap-2">
-              <span className="text-[10px] tracking-[0.2em] font-bold text-cyan-400/80 italic">Análisis finalizado</span>
+            <div className="px-4 py-1.5 rounded-full bg-cyan-500/5 border border-cyan-500/10 mb-6 flex items-center gap-2">
+              <span className="text-[10px] tracking-[0.2em] font-black text-cyan-400/80 italic">Análisis finalizado</span>
             </div>
 
             <div className="pb-4">
               <h1 className="flex items-baseline justify-center gap-4">
-                <span className="text-6xl md:text-[110px] font-light italic text-slate-400 tracking-tighter leading-none">
+                <span className="text-6xl md:text-[100px] font-black italic text-white tracking-tighter leading-none drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                   Nivel {activeLevel}
                 </span>
               </h1>
             </div>
-            <p className="text-slate-500 font-medium tracking-[0.5em] text-[11px] italic opacity-60">
+            <p className="text-slate-500 font-bold tracking-[0.4em] text-[10px] italic opacity-60 ">
               Reporte integral de desempeño
             </p>
           </motion.div>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+          
+          {/* MÉTRICAS DE DOMINIO */}
           <section className="xl:col-span-4 space-y-4">
             <div className="flex items-center gap-3 mb-6 px-2">
-                <Target size={18} className="text-cyan-500" />
-                <h3 className="text-[11px] font-bold text-slate-400 tracking-widest italic">Métricas de dominio</h3>
+                <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+                    <Target size={16} className="text-cyan-500" />
+                </div>
+                <h3 className="text-[11px] font-black text-slate-400 tracking-widest italic ">Métricas de dominio</h3>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
@@ -165,23 +169,23 @@ export default function ResultsPage() {
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-5 rounded-3xl group hover:border-white/10 transition-all shadow-lg"
+                  className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-6 rounded-[2.5rem] group hover:border-cyan-500/30 transition-all shadow-xl"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${m.color} border border-white/5 ${m.stroke}`}>
-                        <m.icon size={18} />
+                      <div className={`p-3 rounded-2xl bg-gradient-to-br ${m.color} border border-white/5 shadow-inner`}>
+                        <m.icon size={20} className={m.stroke} />
                       </div>
-                      <span className="font-bold text-[14px] text-slate-300 italic">{m.name}</span>
+                      <span className="font-black text-[15px] text-slate-300 italic">{m.name}</span>
                     </div>
-                    <span className="text-2xl font-black italic text-white/90">{m.score}%</span>
+                    <span className="text-2xl font-black italic text-white">{m.score}%</span>
                   </div>
                   <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       whileInView={{ width: `${m.score}%` }}
                       transition={{ duration: 1.5, ease: "circOut" }}
-                      className={`h-full bg-gradient-to-r ${m.stroke.replace("text", "from")} to-transparent`}
+                      className={`h-full bg-gradient-to-r ${m.stroke.replace("text", "from")} to-cyan-500/50`}
                     />
                   </div>
                 </motion.div>
@@ -189,39 +193,43 @@ export default function ResultsPage() {
             </div>
           </section>
 
-          <section className="xl:col-span-8 space-y-6">
+          {/* RECOMENDACIÓN IA */}
+          <section className="xl:col-span-8">
             <motion.div 
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-gradient-to-br from-slate-900/60 to-slate-900/20 backdrop-blur-2xl border border-white/10 p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden"
+              className="bg-gradient-to-br from-slate-900/80 to-slate-950 border border-white/10 p-8 md:p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden h-full"
             >
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <Sparkles size={120} className="text-cyan-400" />
+              <div className="absolute top-0 right-0 p-12 opacity-[0.03]">
+                <Sparkles size={200} className="text-cyan-400" />
               </div>
 
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
                 </div>
-                <h2 className="text-xl font-bold italic tracking-tight text-white/80">Recomendación estratégica</h2>
+                <h2 className="text-xl font-black italic tracking-tight text-white/90">Recomendación estratégica</h2>
               </div>
 
               <div className="relative z-10">
-                <blockquote className="text-xl md:text-3xl font-medium italic text-slate-100 leading-tight mb-12 max-w-3xl">
-                  &quot;{report?.ai_advice}&quot;
-                </blockquote>
+                <div className="mb-12">
+                  <span className="text-cyan-500 font-black text-[10px] tracking-[0.4em] mb-4 block italic ">Core Advice</span>
+                  <blockquote className="text-2xl md:text-4xl font-black italic text-white leading-[1.1] max-w-4xl tracking-tighter">
+                    &quot;{report?.ai_advice}&quot;
+                  </blockquote>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
                   {report?.steps.map((step, i) => (
                     <motion.div
                       key={i}
-                      whileHover={{ y: -5 }}
-                      className="bg-white/5 border border-white/5 p-6 rounded-[28px] hover:bg-white/[0.08] transition-all"
+                      whileHover={{ y: -8, backgroundColor: "rgba(255,255,255,0.08)" }}
+                      className="bg-white/5 border border-white/5 p-7 rounded-[2rem] transition-all duration-300 shadow-inner group"
                     >
-                      <div className="text-cyan-500 font-bold text-[10px] tracking-widest mb-3 opacity-50 italic">
+                      <div className="text-cyan-500 font-black text-[9px] tracking-[0.4em] mb-4 opacity-50 italic  group-hover:opacity-100 transition-opacity">
                         Fase 0{i + 1}
                       </div>
-                      <p className="text-[14px] font-medium text-slate-300 leading-relaxed italic">
+                      <p className="text-[14px] font-bold text-slate-300 leading-relaxed italic">
                         {step}
                       </p>
                     </motion.div>
@@ -234,7 +242,7 @@ export default function ResultsPage() {
       </main>
 
       <footer className="max-w-[1400px] mx-auto mt-20 pt-8 border-t border-white/5 text-center">
-        <p className="text-[10px] font-medium text-slate-600 tracking-[0.3em] italic">Core Engine v3.0 // 2026</p>
+        <p className="text-[10px] font-black text-slate-600 tracking-[0.4em] italic ">Core Engine v3.0 // 2026</p>
       </footer>
     </div>
   );

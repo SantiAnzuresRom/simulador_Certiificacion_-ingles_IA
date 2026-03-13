@@ -54,8 +54,6 @@ export default function UserControlPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [newLevel, setNewLevel] = useState("A1");
 
-  const brandColor = "cyan-400"; 
-  const brandBlue = "blue-600"; 
   const modules = ["speaking", "listening", "reading", "writing"];
 
   // 1. Listener de usuarios
@@ -74,7 +72,8 @@ export default function UserControlPage() {
       });
 
       setUsers(sortedUsers);
-      setLoading(false);
+      // Timeout para lucir la carga uniforme
+      setTimeout(() => setLoading(false), 800);
     }, (err) => {
       console.error("Firestore Error:", err);
       setLoading(false);
@@ -141,16 +140,39 @@ export default function UserControlPage() {
     return name.includes(searchLow) || email.includes(searchLow) || u.id.toLowerCase().includes(searchLow);
   });
 
+  // --- PANTALLA DE CARGA UNIFICADA ---
   if (loading) return (
-    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-      <Loader2 className="text-cyan-400 animate-spin relative z-10" size={50} strokeWidth={1} />
-      <p className="text-xs text-slate-500 mt-4 font-mono tracking-widest animate-pulse">Initializing_Systems...</p>
+    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
+      <div className="relative w-24 h-24 mb-6">
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ repeat: Infinity, duration: 3, ease: "linear" }} 
+          className="absolute inset-0 border-b-2 border-cyan-500 rounded-full" 
+        />
+        <motion.div 
+          animate={{ rotate: -360 }} 
+          transition={{ repeat: Infinity, duration: 2, ease: "linear" }} 
+          className="absolute inset-2 border-t-2 border-blue-500 rounded-full" 
+        />
+      </div>
+      <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic ">
+        Accediendo a la base de datos...
+      </p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 p-4 md:p-10 font-sans relative overflow-hidden selection:bg-blue-500/30">
+      <style jsx global>{`
+        ::-webkit-scrollbar { display: none; }
+        body { scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; display: block; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.3); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.6); }
+      `}</style>
+
+      {/* Background FX */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5 pointer-events-none"></div>
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 blur-[150px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/10 blur-[150px] rounded-full pointer-events-none"></div>
@@ -158,21 +180,21 @@ export default function UserControlPage() {
       <div className="max-w-[1600px] mx-auto relative z-10">
         
         <nav className="mb-10 flex items-center justify-between pb-6 border-b border-white/5">
-          <Link href="/Adashboard" className="group inline-flex items-center gap-3 text-[10px] font-bold tracking-[0.3em] text-slate-600 hover:text-white transition-all">
+          <Link href="/Adashboard" className="group inline-flex items-center gap-3 text-[10px] font-bold tracking-[0.3em] text-slate-600 hover:text-white transition-all ">
             <ArrowLeft size={16} className="group-hover:-translate-x-1.5 transition-transform text-blue-500" /> 
-            The Hub
+            Regresar al Hub
           </Link>
           <div className="flex items-center gap-2 bg-slate-900 px-4 py-2 rounded-full border border-white/5 shadow-inner">
             <Fingerprint size={14} className="text-blue-500" />
-            <span className="text-[10px] font-mono text-slate-400">Admin_Auth::Active</span>
+            <span className="text-[10px] font-mono text-slate-400">ADMIN_AUTH::ESTABLISHED</span>
           </div>
         </nav>
 
         <header className="mb-14 relative">
           <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-1 h-16 bg-blue-600 rounded-full"></div>
-          <p className="text-xs font-mono text-blue-500 tracking-[0.5em] mb-2 lowercase">Command Center</p>
-          <h1 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none flex items-center gap-4">
-            Management Console
+          <p className="text-xs font-mono text-blue-500 tracking-[0.5em] mb-2 ">Command Center</p>
+          <h1 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none flex items-center gap-4 ">
+            User Control Panel
           </h1>
         </header>
 
@@ -193,8 +215,8 @@ export default function UserControlPage() {
 
             <div className="bg-slate-950/40 border border-white/5 rounded-[40px] p-7 backdrop-blur-lg shadow-2xl relative overflow-hidden group">
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <h2 className="text-[10px] font-black text-slate-500 tracking-[0.3em] italic">Database Index</h2>
-                <span className="text-[10px] font-mono bg-slate-800 text-blue-400 px-3 py-1 rounded-full">{filteredUsers.length} Subjects</span>
+                <h2 className="text-[10px] font-black text-slate-500 tracking-[0.3em] italic ">Database Index</h2>
+                <span className="text-[10px] font-mono bg-slate-800 text-blue-400 px-3 py-1 rounded-full ">{filteredUsers.length} Subjects</span>
               </div>
 
               <div className="space-y-3 max-h-[650px] overflow-y-auto custom-scrollbar pr-3">
@@ -216,11 +238,11 @@ export default function UserControlPage() {
                         <motion.div layoutId="activePilot" className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />
                     )}
                     <div className="overflow-hidden relative z-10">
-                      <p className={`text-xs font-black truncate pr-4 italic transition-colors ${selectedUser?.id === user.id ? 'text-white' : 'text-slate-200'}`}>
+                      <p className={`text-xs font-black truncate pr-4 italic transition-colors  ${selectedUser?.id === user.id ? 'text-white' : 'text-slate-200'}`}>
                         {user.nombre || user.full_name || "Unknown_Subject"}
                       </p>
                       <p className="text-[9px] text-slate-600 font-mono mt-1.5 flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded ${selectedUser?.id === user.id ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-800 text-slate-400'}`}>
+                        <span className={`px-2 py-0.5 rounded  ${selectedUser?.id === user.id ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-800 text-slate-400'}`}>
                             {user.nivelingles || "N/A"}
                         </span>
                         • ID: {user.id.substring(0, 12)}
@@ -259,7 +281,7 @@ export default function UserControlPage() {
                         className="bg-slate-950 border border-white/5 p-6 rounded-[32px] text-center relative overflow-hidden group hover:border-blue-500/20 transition-colors shadow-xl"
                       >
                         <div className="absolute top-0 left-0 w-full h-1 bg-slate-800 group-hover:bg-blue-600 transition-colors"></div>
-                        <p className="text-[8px] font-black text-slate-600 tracking-[0.3em] mb-3 italic uppercase">{mod}</p>
+                        <p className="text-[8px] font-black text-slate-600 tracking-[0.3em] mb-3 italic ">{mod}</p>
                         <div className="text-3xl font-black text-white italic tracking-tighter relative z-10">
                           {getModuleScore(mod)}<span className="text-xs text-cyan-400 ml-1">%</span>
                         </div>
@@ -280,11 +302,11 @@ export default function UserControlPage() {
                         className="bg-slate-950 border-2 border-cyan-500/30 p-6 rounded-[32px] text-center shadow-[0_15px_40px_-10px_rgba(34,211,238,0.2)] relative"
                     >
                       <Zap size={16} className="absolute top-4 right-4 text-cyan-500 opacity-50" />
-                      <p className="text-[8px] font-black text-cyan-500 tracking-[0.3em] mb-3 italic">Level_Efficiency</p>
+                      <p className="text-[8px] font-black text-cyan-500 tracking-[0.3em] mb-3 italic ">Level_Efficiency</p>
                       <div className="text-3xl font-black text-white italic tracking-tighter">
                         {avgLevel}<span className="text-xs text-cyan-400 ml-1">%</span>
                       </div>
-                      <p className="text-[9px] text-slate-500 mt-2 font-mono">Aggregate_Score</p>
+                      <p className="text-[9px] text-slate-500 mt-2 font-mono ">Aggregate_Score</p>
                     </motion.div>
                   </div>
 
@@ -296,9 +318,9 @@ export default function UserControlPage() {
                           <ShieldCheck size={40} strokeWidth={1} />
                         </div>
                         <div>
-                          <p className="text-xs font-mono text-blue-500 tracking-[0.3em] lowercase">Control</p>
-                          <h3 className="text-4xl font-black text-white italic tracking-tighter mt-1">
-                            User progress<span className="text-white opacity-80">👤</span>
+                          <p className="text-xs font-mono text-blue-500 tracking-[0.3em] ">Control</p>
+                          <h3 className="text-4xl font-black text-white italic tracking-tighter mt-1 ">
+                            User progress<span className="text-white opacity-80 ml-2">👤</span>
                           </h3>
                         </div>
                       </div>
@@ -308,9 +330,8 @@ export default function UserControlPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10 mb-12">
-                      {/* Sección Nivel con Porcentajes */}
                       <div className="space-y-5 bg-slate-950 p-8 rounded-3xl border border-white/5 shadow-inner">
-                        <label className="text-[10px] font-black text-slate-400 tracking-[0.3em] italic flex items-center gap-2">
+                        <label className="text-[10px] font-black text-slate-400 tracking-[0.3em] italic flex items-center gap-2 ">
                             <Zap size={14} className="text-blue-500" /> Selecciona el nivel
                         </label>
                         <div className="flex gap-3">
@@ -318,7 +339,7 @@ export default function UserControlPage() {
                             <select 
                                 value={newLevel} 
                                 onChange={(e) => setNewLevel(e.target.value)}
-                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-xs font-bold text-cyan-400 focus:outline-none focus:border-cyan-500 flex-1 appearance-none cursor-pointer shadow-md"
+                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 text-xs font-bold text-cyan-400 focus:outline-none focus:border-cyan-500 flex-1 appearance-none cursor-pointer shadow-md "
                             >
                                 {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
                                 <option key={lvl} value={lvl} className="bg-slate-950 text-white">LEVEL_{lvl}</option>
@@ -335,11 +356,10 @@ export default function UserControlPage() {
                           </button>
                         </div>
 
-                        {/* BLOQUE DE PORCENTAJES DINÁMICOS */}
                         <div className="pt-4 mt-2 border-t border-white/5 grid grid-cols-4 gap-2">
                             {modules.map((mod) => (
                                 <div key={mod} className="text-center">
-                                    <p className="text-[7px] font-black text-slate-600 uppercase tracking-tighter mb-1">{mod.substring(0,4)}</p>
+                                    <p className="text-[7px] font-black text-slate-600  tracking-tighter mb-1">{mod.substring(0,4)}</p>
                                     <div className="text-[11px] font-mono font-bold text-cyan-500/80">
                                         {getModuleScore(mod)}%
                                     </div>
@@ -353,31 +373,28 @@ export default function UserControlPage() {
                                 </div>
                             ))}
                         </div>
-
-                        <p className="text-[9px] text-slate-600 italic font-mono pt-1"></p>
                       </div>
 
-                      {/* Sección Estado de Seguridad */}
                       <div className="space-y-5 bg-slate-950 p-8 rounded-3xl border border-white/5 shadow-inner">
-                        <label className="text-[10px] font-black text-slate-400 tracking-[0.3em] italic flex items-center gap-2">
+                        <label className="text-[10px] font-black text-slate-400 tracking-[0.3em] italic flex items-center gap-2 ">
                             <Fingerprint size={14} className="text-blue-500" /> Access Status
                         </label>
                         <button
                           onClick={() => handleUpdateUser(selectedUser.id, { access_blocked: !selectedUser.access_blocked })}
                           disabled={isActionLoading}
-                          className={`w-full py-4.5 rounded-xl text-xs font-black flex items-center justify-center gap-3 border-2 transition-all shadow-lg active:scale-[0.98] ${
+                          className={`w-full py-4.5 rounded-xl text-xs font-black flex items-center justify-center gap-3 border-2 transition-all shadow-lg active:scale-[0.98]  ${
                             selectedUser.access_blocked 
                               ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20" 
                               : "bg-blue-600/10 border-blue-500/40 text-blue-400 hover:bg-blue-600/20"
                           }`}
                         >
                           {selectedUser.access_blocked ? (
-                            <><Unlock size={18} strokeWidth={2.5}/> RESTORE_SUBJECT_ACCESS</>
+                            <><Unlock size={18} strokeWidth={2.5}/> Restore Access</>
                           ) : (
-                            <><Ban size={18} strokeWidth={2.5}/> REVOKE ACCESS</>
+                            <><Ban size={18} strokeWidth={2.5}/> Revoke Access</>
                           )}
                         </button>
-                         <p className={`text-[9px] italic font-mono pt-1 ${selectedUser.access_blocked ? 'text-emerald-700' : 'text-blue-700'}`}>
+                         <p className={`text-[9px] italic font-mono pt-1  ${selectedUser.access_blocked ? 'text-emerald-700' : 'text-blue-700'}`}>
                             :: {selectedUser.access_blocked ? 'BLOQUEADO' : 'ACTIVO'}
                         </p>
                       </div>
@@ -393,7 +410,7 @@ export default function UserControlPage() {
                         </button>
                         <button 
                             onClick={() => handleDeleteUser(selectedUser.id)} 
-                            className="group bg-slate-950 hover:bg-red-950 text-red-700 hover:text-red-200 font-bold py-5 rounded-2xl flex items-center justify-center gap-3 border border-red-900/30 text-[10px] italic tracking-widest transition-all shadow-lg"
+                            className="group bg-slate-950 hover:bg-red-950 text-red-700 hover:text-red-200 font-bold py-5 rounded-2xl flex items-center justify-center gap-3 border border-red-900/30 text-[10px] italic tracking-widest transition-all shadow-lg "
                         >
                             <Trash2 size={16} className="group-hover:animate-pulse" /> 
                             Erase user permanently
@@ -410,7 +427,7 @@ export default function UserControlPage() {
                     className="h-full min-h-[700px] border border-dashed border-white/10 rounded-[60px] flex flex-col items-center justify-center text-center p-12 bg-slate-950/20 backdrop-blur-sm"
                 >
                   <UserMinus size={80} className="text-slate-800 opacity-30" strokeWidth={1} />
-                  <h4 className="text-xs font-black tracking-[0.5em] text-slate-600 italic mt-6">
+                  <h4 className="text-xs font-black tracking-[0.5em] text-slate-600 italic mt-6 ">
                     Awaiting_Selection_Input
                   </h4>
                 </motion.div>
@@ -420,18 +437,11 @@ export default function UserControlPage() {
         </div>
 
         <footer className="mt-20 pt-8 border-t border-white/5 text-center">
-            <p className="text-[9px] font-mono text-slate-700 tracking-widest uppercase">
+            <p className="text-[9px] font-mono text-slate-700 tracking-widest ">
                 AI_REGISTRY_PROTOCOL_v4.1 // UNIFIED_COMMAND_INTERFACE
             </p>
         </footer>
       </div>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.3); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.6); }
-      `}</style>
     </div>
   );
 }

@@ -4,283 +4,286 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
-  Award,
   BarChart3,
-  Target,
   User as UserIcon,
-  Zap,
   LogOut,
+  Activity,
+  ChevronRight,
+  LayoutGrid,
+  Zap
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { auth, db } from "../src/firebase/config";
+import Image from "next/image";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [level, setLevel] = useState<string>("A1");
-  const [userData, setUserData] = useState({ fullName: "", email: "", uid: "" });
+  const [userData, setUserData] = useState({ fullName: "", email: "", uid: "", role: "" });
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ A1: 0, A2: 0, B1: 0, B2: 0, C1: 0, C2: 0 });
 
-  const [stats, setStats] = useState({
-    A1: 0, A2: 0, B1: 0, B2: 0, C1: 0, C2: 0,
-  });
+  const globalProgress = Math.round(Object.values(stats).reduce((a, b) => a + b, 0) / 6);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.push("/login");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
+      router.push("/");
+    } catch (error) { console.error(error); }
   };
 
   useEffect(() => {
+    let unsubSnap: () => void;
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-
-      // Referencias a las dos posibles colecciones donde vive el nombre
+      if (!user) { router.replace("/login"); return; }
+      let nameFound = user.displayName || "Agente";
+      let roleFound = "student";
       const userRef = doc(db, "users", user.uid);
       const progressRef = doc(db, "user_progress", user.uid);
 
       try {
-        // 1. Intento inicial para sacar el nombre real de la tabla 'users'
         const userSnap = await getDoc(userRef);
-        let nameFound = "Usuario";
-
         if (userSnap.exists()) {
-          nameFound = userSnap.data().full_name || userSnap.data().name || user.displayName || "Usuario";
-        } else {
-          nameFound = user.displayName || "Usuario";
+          const d = userSnap.data();
+          nameFound = d.nombre || d.full_name || d.fullName || nameFound;
+          roleFound = d.role || "student";
         }
-
-        // 2. Escucha en tiempo real de progreso y datos de nivel
-        const unsubSnap = onSnapshot(progressRef, (docSnap) => {
+        unsubSnap = onSnapshot(progressRef, (docSnap) => {
           if (docSnap.exists()) {
             const pData = docSnap.data();
-            
-            setUserData({
-              fullName: pData.full_name || nameFound, 
-              email: user.email || "",
-              uid: user.uid,
-            });
-
-            const currentLvl = pData.currentLevel || "A1";
-            setLevel(currentLvl);
-
-            const calculateLevelAvg = (moduleData: any) => {
-              if (!moduleData) return 0;
-              const { reading = 0, listening = 0, writing = 0, speaking = 0 } = moduleData;
-              return Math.round((reading + listening + writing + speaking) / 4);
-            };
-
+            setUserData({ fullName: nameFound, email: user.email || "", uid: user.uid, role: roleFound });
+            setLevel(pData.currentLevel || "A1");
+            const calc = (m: any) => m ? Math.round((m.reading + m.listening + m.writing + m.speaking) / 4) : 0;
             setStats({
-              A1: calculateLevelAvg(pData.modules_A1),
-              A2: calculateLevelAvg(pData.modules_A2),
-              B1: calculateLevelAvg(pData.modules_B1),
-              B2: calculateLevelAvg(pData.modules_B2),
-              C1: calculateLevelAvg(pData.modules_C1),
-              C2: calculateLevelAvg(pData.modules_C2),
+              A1: calc(pData.modules_A1), A2: calc(pData.modules_A2), B1: calc(pData.modules_B1),
+              B2: calc(pData.modules_B2), C1: calc(pData.modules_C1), C2: calc(pData.modules_C2),
             });
           } else {
-            // Caso: Usuario nuevo sin documento de progreso aún
-            setUserData({
-              fullName: nameFound,
-              email: user.email || "",
-              uid: user.uid,
-            });
+            setUserData({ fullName: nameFound, email: user.email || "", uid: user.uid, role: roleFound });
           }
           setLoading(false);
         });
-
-        return () => unsubSnap();
-      } catch (err) {
-        console.error("Error en la carga de datos:", err);
-        setLoading(false);
-      }
+      } catch (err) { setLoading(false); }
     });
-
-    return () => unsubAuth();
+    return () => { unsubAuth(); if (unsubSnap) unsubSnap(); };
   }, [router]);
 
   const handleLevelSelect = async (lvl: string) => {
     if (!userData.uid) return;
     try {
-      const progressRef = doc(db, "user_progress", userData.uid);
-      await setDoc(progressRef, {
-        currentLevel: lvl,
-        updatedAt: new Date().toISOString(),
-        email: userData.email,
-        full_name: userData.fullName 
+      await setDoc(doc(db, "user_progress", userData.uid), {
+        currentLevel: lvl, updatedAt: new Date().toISOString(),
       }, { merge: true });
-
       setLevel(lvl);
       router.push("/modulos");
-    } catch (error) {
-      console.error("sync error:", error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const levelHistory = [
     { lvl: "A1", progress: stats.A1, color: "from-cyan-400 to-blue-500" },
     { lvl: "A2", progress: stats.A2, color: "from-blue-500 to-indigo-500" },
     { lvl: "B1", progress: stats.B1, color: "from-indigo-500 to-purple-500" },
-    { lvl: "B2", progress: stats.B2, color: "from-slate-500 to-slate-300" },
+    { lvl: "B2", progress: stats.B2, color: "from-slate-400 to-slate-200" },
     { lvl: "C1", progress: stats.C1, color: "from-purple-600 to-pink-600" },
-    { lvl: "C2", progress: stats.C2, color: "from-amber-500 to-orange-600" },
+    { lvl: "C2", progress: stats.C2, color: "from-amber-400 to-orange-600" },
   ];
 
-  if (loading)
-    return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
-        <div className="relative w-24 h-24 mb-6">
-          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }} className="absolute inset-0 border-b-2 border-cyan-500 rounded-full" />
-          <motion.div animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="absolute inset-2 border-t-2 border-blue-500 rounded-full" />
+  // --- NUEVA PANTALLA DE CARGA BASADA EN TU IMAGEN ---
+  if (loading) return (
+    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.05)_0%,transparent_50%)]" />
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1 }}
+        className="relative z-10 flex flex-col items-center"
+      >
+        <div className="relative w-32 h-32 mb-8">
+          {/* Esfera de cristal con aura */}
+          <div className="absolute inset-0 bg-cyan-500/20 blur-[40px] rounded-full animate-pulse" />
+          <div className="absolute inset-2 border border-cyan-500/30 rounded-full backdrop-blur-sm bg-gradient-to-b from-white/10 to-transparent" />
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 border-t-2 border-r-2 border-cyan-500/40 rounded-full"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+             <Image src="/logo.png" alt="Logo" width={60} height={20} className="brightness-150 animate-pulse" />
+          </div>
         </div>
-        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic">Sincronizando identidad...</p>
-      </div>
-    );
+        <span className="text-[10px] font-black text-cyan-500 tracking-[0.5em] uppercase italic animate-pulse">
+          Synchronizing_System
+        </span>
+      </motion.div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
-      <style jsx global>{`
-        ::-webkit-scrollbar { display: none; }
-        body { scrollbar-width: none; }
-      `}</style>
-
-      {/* Luces Ambientales */}
+    <div className="min-h-screen bg-[#020617] text-slate-300 font-sans selection:bg-cyan-500/30 pb-20 overflow-x-hidden">
+      
+      {/* --- BG EFFECTS --- */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/5 blur-[120px] rounded-full" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/5 blur-[120px] animate-pulse" />
       </div>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
-        {/* Header Principal */}
-        <header className="relative flex flex-col md:flex-row justify-between items-center mb-12 p-10 bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 rounded-[45px] backdrop-blur-3xl shadow-3xl group">
-          
-          {/* Botón Cerrar Sesión */}
-          <button 
-            onClick={handleLogout}
-            className="absolute top-6 right-8 flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-slate-500 hover:text-red-400 transition-colors uppercase italic"
+      <main className="relative z-10 max-w-[1400px] mx-auto px-6 pt-6">
+        
+        {/* --- NAV MINIMALISTA --- */}
+        <nav className="flex justify-between items-center mb-10 px-8 py-4 bg-white/[0.02] backdrop-blur-3xl rounded-3xl border border-white/[0.05]">
+          <Link href="/">
+            <Image src="/logo.png" alt="Logo" width={100} height={28} className="brightness-125" />
+          </Link>
+          <div className="flex items-center gap-3">
+            {userData.role === "admin" && (
+              <button onClick={() => router.push("/Adashboard")} className="text-[9px] font-black text-cyan-400 border border-cyan-500/20 px-4 py-2 rounded-xl bg-cyan-500/5 tracking-widest italic uppercase">
+                Admin
+              </button>
+            )}
+            <button onClick={handleLogout} className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-red-400 transition-colors">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </nav>
+
+        {/* --- HERO UNIFICADO (DASHBOARD CORE) --- */}
+        <section className="mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="p-8 md:p-12 bg-gradient-to-br from-slate-900/50 via-slate-900/80 to-[#020617] border border-white/[0.08] rounded-[4rem] shadow-2xl relative overflow-hidden"
           >
-            <LogOut size={14} />
-            Desconectar
-          </button>
-
-          <div className="flex items-center gap-8">
-            <div className="relative">
-              <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <div className="relative w-24 h-24 rounded-full bg-[#020617] border border-white/10 flex items-center justify-center overflow-hidden shadow-inner">
-                <UserIcon size={38} className="text-slate-600 group-hover:text-cyan-500 transition-colors" />
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-12">
+              <div className="flex items-center gap-6 max-w-full lg:max-w-3xl min-w-0">
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0 shadow-inner">
+                  <UserIcon size={28} className="text-cyan-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] font-black text-cyan-500 tracking-[0.4em] italic mb-1.5 block uppercase">System Agent</span>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-black text-white italic tracking-tight leading-[1.1] break-words md:whitespace-nowrap overflow-hidden text-ellipsis transition-all">
+                    {userData.fullName || "User_X"}
+                  </h1>
+                  <p className="text-[10px] text-slate-500 font-bold tracking-wider mt-1 opacity-60 truncate">{userData.email}</p>
+                </div>
               </div>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold tracking-[0.5em] text-cyan-500 mb-2 block italic uppercase">Agente Activo</span>
-              <h1 className="text-4xl md:text-6xl font-light text-white italic tracking-tighter leading-none mb-1">
-                {userData.fullName}
-              </h1>
-              <p className="text-[11px] text-slate-500 italic tracking-wider">{userData.email}</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-10 mt-10 md:mt-0 px-10 py-5 bg-slate-950/40 rounded-3xl border border-white/5 shadow-inner">
-            <div className="text-center">
-              <p className="text-[10px] font-bold text-cyan-500 tracking-[0.3em] mb-2 italic uppercase">Target Level</p>
-              <p className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-cyan-500 italic leading-none tracking-tighter">
-                {level}
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Selector de Niveles */}
-          <section className="lg:col-span-8 bg-slate-900/20 border border-white/5 rounded-[50px] p-12 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Target size={150} className="text-cyan-500" />
-            </div>
-
-            <div className="flex items-center gap-5 mb-12 relative z-10">
-              <div className="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 shadow-inner">
-                <Target className="text-cyan-400" size={24} />
-              </div>
-              <div>
-                <h2 className="text-xl font-light tracking-tight text-white italic">Fase de Entrenamiento</h2>
-                <p className="text-[11px] text-slate-500 tracking-[0.05em] italic opacity-80">Selecciona el rango de dificultad para iniciar el despliegue</p>
+              <div className="bg-[#020617]/50 px-8 py-5 rounded-[2.2rem] border border-white/5 text-center min-w-[140px] backdrop-blur-md shrink-0">
+                <p className="text-[8px] font-black text-slate-500 tracking-[0.3em] uppercase mb-1">Target</p>
+                <span className="text-5xl font-black text-white italic drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]">{level}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-10 border-t border-white/5">
+              <div className="flex flex-col justify-center">
+                <div className="flex justify-between items-end mb-3 px-1">
+                  <span className="text-[10px] font-black text-cyan-500/60 tracking-widest italic uppercase">Overall_Sync</span>
+                  <span className="text-2xl font-black text-white italic">{globalProgress}%</span>
+                </div>
+                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }} animate={{ width: `${globalProgress}%` }}
+                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={() => router.push("/results")}
+                className="group relative h-20 bg-cyan-500 rounded-3xl flex items-center justify-between px-8 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-900/40 overflow-hidden"
+              >
+                <div className="relative z-10 text-left">
+                  <p className="text-[8px] font-black text-white/60 tracking-widest uppercase">Analysis</p>
+                  <h4 className="text-lg font-black text-white italic leading-none">Recommendations</h4>
+                </div>
+                <ChevronRight className="text-white group-hover:translate-x-1 transition-transform" />
+                <div className="absolute top-0 right-0 w-24 h-full bg-white/10 skew-x-[20deg] translate-x-12 group-hover:translate-x-8 transition-transform" />
+              </button>
+
+              <div className="hidden lg:flex items-center gap-4 px-8 border-l border-white/5">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                  <Activity size={18} className="text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-slate-600 tracking-widest uppercase">Activity</p>
+                  <p className="text-xs font-bold text-slate-400">System: Operational</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* --- GRID DE CONTENIDO --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            className="lg:col-span-8 bg-white/[0.01] border border-white/[0.05] rounded-[3.5rem] p-8 md:p-10"
+          >
+            <div className="flex items-center gap-3 mb-10">
+              <div className="p-2 bg-cyan-500/10 rounded-xl">
+                <LayoutGrid size={18} className="text-cyan-400" />
+              </div>
+              <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Levels</h2>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
-                <motion.button
+                <button
                   key={lvl}
-                  whileHover={{ scale: 1.02, y: -5 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={() => handleLevelSelect(lvl)}
-                  className={`group relative h-40 rounded-[40px] border transition-all duration-500 flex items-center justify-center overflow-hidden
-                    ${level === lvl ? "border-cyan-500/30 bg-cyan-500/5 shadow-[0_20px_40px_rgba(6,182,212,0.1)]" : "border-white/5 bg-slate-950/40 hover:border-white/10"}`}
+                  className={`group relative h-40 rounded-[2.5rem] border transition-all duration-500 flex flex-col items-center justify-center overflow-hidden
+                    ${level === lvl ? "border-cyan-500 bg-cyan-500/10 shadow-xl shadow-cyan-500/5" : "border-white/5 bg-slate-900/40 hover:border-white/20"}`}
                 >
-                  <span className={`text-6xl font-light italic transition-all duration-500 ${level === lvl ? "text-white scale-110" : "text-slate-800 group-hover:text-slate-500"}`}>
+                  <span className={`text-5xl font-black italic transition-all ${level === lvl ? "text-white scale-110" : "text-slate-800"}`}>
                     {lvl}
                   </span>
-                  {level === lvl && (
-                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
-                  )}
-                </motion.button>
+                  <div className={`mt-3 px-4 py-1 rounded-full text-[8px] font-black tracking-widest uppercase
+                    ${level === lvl ? "bg-cyan-500 text-[#020617]" : "bg-white/5 text-slate-600 opacity-0 group-hover:opacity-100"}`}>
+                    {level === lvl ? "Selected" : "SYNC"}
+                  </div>
+                  {level === lvl && <div className="absolute top-4 right-4 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />}
+                </button>
               ))}
             </div>
-          </section>
+          </motion.div>
 
-          {/* Sidebar / Progreso */}
-          <aside className="lg:col-span-4 space-y-8">
-            <motion.button
-              whileHover={{ y: -4, scale: 1.01 }}
-              onClick={() => router.push("/results")}
-              className="w-full p-10 rounded-[45px] bg-gradient-to-br from-slate-900 to-slate-950 border border-white/10 flex items-center justify-between group backdrop-blur-md shadow-2xl"
-            >
-              <div className="flex items-center gap-6">
-                <div className="w-14 h-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center border border-cyan-500/20">
-                  <Award size={28} className="text-cyan-400" />
-                </div>
-                <div className="text-left">
-                  <p className="text-[10px] font-bold tracking-[0.4em] text-slate-600 mb-1 italic uppercase">Reporting</p>
-                  <h4 className="text-xl font-light italic text-white tracking-tighter">Resultados</h4>
-                </div>
-              </div>
-              <ArrowRight size={20} className="text-slate-700 group-hover:text-white transition-all" />
-            </motion.button>
-
-            <div className="bg-slate-900/40 border border-white/5 rounded-[45px] p-10 backdrop-blur-md shadow-inner">
-              <div className="flex items-center gap-3 mb-10">
-                <BarChart3 className="text-cyan-500" size={20} />
-                <h3 className="text-[10px] font-bold tracking-[0.4em] text-slate-500 italic uppercase">Estado de Misión</h3>
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
+            className="lg:col-span-4 space-y-6"
+          >
+            <div className="bg-[#0a0f1e]/60 border border-white/[0.08] rounded-[3.5rem] p-10 backdrop-blur-3xl shadow-2xl">
+              <div className="flex items-center gap-3 mb-8 text-slate-500">
+                <BarChart3 size={16} />
+                <h3 className="text-[9px] font-black tracking-[0.4em] italic uppercase">Progression</h3>
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {levelHistory.map((item) => (
-                  <div key={item.lvl} className="group">
-                    <div className="flex justify-between items-center mb-3 px-1">
-                      <span className={`text-[12px] font-bold italic tracking-[0.2em] ${level === item.lvl ? "text-cyan-400" : "text-slate-600"}`}>
+                  <div key={item.lvl} className="group/bar">
+                    <div className="flex justify-between items-end mb-2 px-1">
+                      <span className={`text-[10px] font-black italic ${level === item.lvl ? "text-cyan-400" : "text-slate-600"}`}>
                         LVL_{item.lvl}
                       </span>
-                      <span className="text-[11px] font-black text-white/40 italic">{item.progress}%</span>
+                      <span className="text-[9px] font-black text-white/20 group-hover/bar:text-white/50 transition-colors">{item.progress}%</span>
                     </div>
-                    <div className="h-[3px] w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-white/[0.02] rounded-full overflow-hidden border border-white/5">
                       <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${item.progress}%` }}
-                        transition={{ duration: 1.5, ease: "circOut" }}
-                        className={`h-full rounded-full bg-gradient-to-r ${item.color}`}
+                        initial={{ width: 0 }} animate={{ width: `${item.progress}%` }}
+                        className={`h-full bg-gradient-to-r ${item.color} rounded-full`}
                       />
                     </div>
                   </div>
                 ))}
               </div>
+
+              <div className="mt-12 p-6 rounded-[2rem] bg-cyan-500/5 border border-cyan-500/10 relative group">
+                <Zap size={20} className="text-cyan-400/20 absolute top-4 right-4 group-hover:text-cyan-400/50 transition-colors" />
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed italic">
+                  "El éxito bilingüe es una maratón de inmersión, no un sprint de gramática."
+                </p>
+              </div>
             </div>
-          </aside>
+          </motion.div>
         </div>
       </main>
     </div>

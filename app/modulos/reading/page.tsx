@@ -284,8 +284,8 @@ export default function ReadingModule() {
             >
               <span className="group-hover:translate-x-[-2px] transition-transform">
                 {currentQuestion === (data?.questions?.length ?? 0) - 1
-                  ? "Finalizar Protocolo"
-                  : "Siguiente Fase"}
+                  ? "Finalizar Test"
+                  : "Siguiente Pregunta"}
               </span>
               <Send size={16} className="group-hover:translate-x-1 group-hover:translate-y-[-1px] transition-transform" />
             </button>

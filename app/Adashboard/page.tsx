@@ -4,10 +4,8 @@ import { collection, onSnapshot, query, doc, updateDoc, deleteDoc } from "fireba
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
-  ArrowUpRight,
   BrainCircuit,
   Database,
-  Loader2,
   MoreHorizontal,
   Search,
   UserCog,
@@ -31,7 +29,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilter, setLevelFilter] = useState("ALL"); 
-  const [showOnlineList, setShowOnlineList] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false); 
 
   const levels = ["ALL", "A1", "A2", "B1", "B2", "C1", "C2"];
@@ -41,7 +38,8 @@ export default function AdminDashboard() {
     const qUsers = query(collection(db, "users"));
     const unsubUsers = onSnapshot(qUsers, (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
+      // Un pequeño timeout para que la animación de carga se luzca
+      setTimeout(() => setLoading(false), 800);
     });
 
     const qRequests = query(collection(db, "admin_requests"));
@@ -59,7 +57,7 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.push("/login");
+      router.push("/"); 
     } catch (e) {
       console.error("Error al cerrar sesión:", e);
     }
@@ -70,7 +68,6 @@ export default function AdminDashboard() {
       const userRef = doc(db, "users", reqId);
       await updateDoc(userRef, { role: "admin", is_instructor: true });
       await deleteDoc(doc(db, "admin_requests", reqId));
-      alert("Acceso de administrador concedido.");
     } catch (e) { console.error(e); }
   };
 
@@ -90,14 +87,36 @@ export default function AdminDashboard() {
     return matchesSearch && matchesLevel;
   });
 
+  // --- PANTALLA DE CARGA IDENTICA AL DASHBOARD ---
   if (loading) return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center font-sans">
-      <Loader2 className="text-cyan-500 animate-spin" size={40} />
+    <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
+      <div className="relative w-24 h-24 mb-6">
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ repeat: Infinity, duration: 3, ease: "linear" }} 
+          className="absolute inset-0 border-b-2 border-cyan-500 rounded-full" 
+        />
+        <motion.div 
+          animate={{ rotate: -360 }} 
+          transition={{ repeat: Infinity, duration: 2, ease: "linear" }} 
+          className="absolute inset-2 border-t-2 border-blue-500 rounded-full" 
+        />
+      </div>
+      <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic uppercase">
+        Sincronizando identidad...
+      </p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 p-6 md:p-10 selection:bg-cyan-500/30 font-sans relative">
+      <style jsx global>{`
+        ::-webkit-scrollbar { display: none; }
+        body { scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; display: block; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(234, 179, 8, 0.2); border-radius: 10px; }
+      `}</style>
+
       {/* Background FX */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-600/5 blur-[120px] rounded-full" />
@@ -109,15 +128,12 @@ export default function AdminDashboard() {
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-              <span className="text-[10px] font-black tracking-[0.4em] text-cyan-500 italic ">System Administrator</span>
+              <span className="text-[10px] font-black tracking-[0.4em] text-cyan-500 italic uppercase">System Administrator</span>
             </div>
-            <h1 className="text-5xl font-black text-white italic tracking-tighter leading-none ">Control Center</h1>
+            <h1 className="text-5xl font-black text-white italic tracking-tighter leading-none uppercase">Control Center</h1>
           </motion.div>
 
-          {/* BARRA DE BOTONES DE COLORES */}
           <div className="flex flex-wrap items-center gap-4">
-            
-            {/* AMARILLO: SOLICITUDES */}
             <motion.button
               onClick={() => setShowRequestsModal(true)}
               whileHover={{ scale: 1.05 }}
@@ -125,7 +141,7 @@ export default function AdminDashboard() {
               className="bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500/20 px-4 py-2 rounded-xl flex items-center gap-3 transition-all relative"
             >
               <ClipboardList size={16} className="text-yellow-500" />
-              <span className="text-[10px] font-black text-yellow-500 tracking-widest ">Solicitudes</span>
+              <span className="text-[10px] font-black text-yellow-500 tracking-widest uppercase">Solicitudes</span>
               {requests.length > 0 && (
                 <span className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce">
                   {requests.length}
@@ -133,15 +149,13 @@ export default function AdminDashboard() {
               )}
             </motion.button>
 
-            {/* AZUL: VER MÓDULOS (FIXED) */}
             <Link href="/modulos">
               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 px-4 py-2 rounded-xl flex items-center gap-3 transition-all">
                 <Layout size={16} className="text-blue-400" />
-                <span className="text-[10px] font-black text-blue-400 tracking-widest ">Módulos</span>
+                <span className="text-[10px] font-black text-blue-400 tracking-widest uppercase">Módulos</span>
               </motion.button>
             </Link>
 
-            {/* MORADO: ADMINISTRATOR */}
             <Link href="/Adashboard/control">
               <motion.button 
                 whileHover={{ scale: 1.05 }} 
@@ -149,11 +163,10 @@ export default function AdminDashboard() {
                 className="bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 px-4 py-2 rounded-xl flex items-center gap-3 transition-all group"
               >
                 <UserCog size={16} className="text-purple-500" />
-                <span className="text-[10px] font-black text-purple-500 tracking-widest ">Administrator</span>
+                <span className="text-[10px] font-black text-purple-500 tracking-widest uppercase">Administrator</span>
               </motion.button>
             </Link>
 
-            {/* ROJO: SALIR (FUNCIONAL) */}
             <motion.button 
               onClick={handleLogout}
               whileHover={{ scale: 1.05 }} 
@@ -161,7 +174,7 @@ export default function AdminDashboard() {
               className="bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 px-4 py-2 rounded-xl flex items-center gap-3 transition-all"
             >
               <LogOut size={16} className="text-red-500" />
-              <span className="text-[10px] font-black text-red-500 tracking-widest ">Salir</span>
+              <span className="text-[10px] font-black text-red-500 tracking-widest uppercase">Salir</span>
             </motion.button>
           </div>
         </header>
@@ -176,7 +189,7 @@ export default function AdminDashboard() {
           ].map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="bg-slate-900/40 border border-white/5 p-6 rounded-[35px] backdrop-blur-xl group hover:border-white/20 transition-all">
               <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110`}><s.icon className={s.color} size={20} /></div>
-              <p className="text-[9px] font-black text-slate-500 tracking-[0.2em] ">{s.label}</p>
+              <p className="text-[9px] font-black text-slate-500 tracking-[0.2em] uppercase">{s.label}</p>
               <p className="text-3xl font-black text-white italic">{s.val}</p>
             </motion.div>
           ))}
@@ -186,7 +199,7 @@ export default function AdminDashboard() {
         <section className="bg-slate-900/20 border border-white/5 rounded-[50px] backdrop-blur-2xl shadow-2xl relative z-10 overflow-hidden">
           <div className="p-8 border-b border-white/5 space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <h2 className="text-xl font-black italic text-white tracking-tight ">Database</h2>
+              <h2 className="text-xl font-black italic text-white tracking-tight uppercase">Database</h2>
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
                 <input 
@@ -206,7 +219,7 @@ export default function AdminDashboard() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-white/[0.02] text-[9px] font-black tracking-[0.3em] text-slate-500 border-b border-white/5 ">
+              <thead className="bg-white/[0.02] text-[9px] font-black tracking-[0.3em] text-slate-500 border-b border-white/5 uppercase">
                 <tr><th className="px-10 py-6">Subject</th><th className="px-8 py-6">Level</th><th className="px-8 py-6">Status</th><th className="px-8 py-6 text-right">Actions</th></tr>
               </thead>
               <tbody className="divide-y divide-white/[0.03]">
@@ -214,7 +227,7 @@ export default function AdminDashboard() {
                   <tr key={u.id} className="hover:bg-white/[0.03] transition-colors group">
                     <td className="px-10 py-6">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-400 transition-colors ">
+                        <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-400 transition-colors uppercase">
                           {u.full_name || u.nombre || "Unknown"}
                         </span>
                         <span className="text-[8px] text-slate-600 font-mono">ID: {u.id.substring(0, 8)}...</span>
@@ -246,7 +259,7 @@ export default function AdminDashboard() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRequestsModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
               <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-slate-950 border border-yellow-500/30 w-full max-w-2xl rounded-[40px] overflow-hidden relative shadow-2xl">
                 <div className="p-8 border-b border-white/5 flex justify-between items-center bg-yellow-500/5">
-                  <h3 className="text-2xl font-black italic text-yellow-500 flex items-center gap-3 ">
+                  <h3 className="text-2xl font-black italic text-yellow-500 flex items-center gap-3 uppercase">
                     <AlertTriangle size={24} /> Admin_Requests
                   </h3>
                   <button onClick={() => setShowRequestsModal(false)} className="p-3 hover:bg-white/5 rounded-full transition-colors text-slate-500 hover:text-white"><X /></button>
@@ -256,17 +269,17 @@ export default function AdminDashboard() {
                     requests.map((req) => (
                       <motion.div key={req.id} layout className="bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-yellow-500/40">
                         <div className="space-y-2 flex-1">
-                          <p className="text-sm font-black text-white italic ">{req.nombre || "Instructor Candidate"}</p>
+                          <p className="text-sm font-black text-white italic uppercase">{req.nombre || "Instructor Candidate"}</p>
                           <p className="text-[10px] text-slate-500 italic">"{req.motivo || "Sin descripción."}"</p>
                         </div>
                         <div className="flex gap-3">
-                          <button onClick={() => handleReject(req.id)} className="px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-[10px] font-black  hover:bg-red-500 hover:text-white transition-all">Rechazar</button>
-                          <button onClick={() => handleAccept(req.id)} className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black  hover:bg-emerald-500 hover:text-white transition-all">Aceptar</button>
+                          <button onClick={() => handleReject(req.id)} className="px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all">Rechazar</button>
+                          <button onClick={() => handleAccept(req.id)} className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase hover:bg-emerald-500 hover:text-white transition-all">Aceptar</button>
                         </div>
                       </motion.div>
                     ))
                   ) : (
-                    <div className="py-20 text-center text-slate-600 italic text-[10px] tracking-[0.4em] ">No pending requests</div>
+                    <div className="py-20 text-center text-slate-600 italic text-[10px] tracking-[0.4em] uppercase">No pending requests</div>
                   )}
                 </div>
               </motion.div>
@@ -274,11 +287,6 @@ export default function AdminDashboard() {
           )}
         </AnimatePresence>
       </main>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(234, 179, 8, 0.2); border-radius: 10px; }
-      `}</style>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export default function ChatBot() {
       const data = await res.json();
       setMessages(prev => [...prev, { text: data.reply, isBot: true }]);
     } catch (error) {
-      setMessages(prev => [...prev, { text: "Error de conexión con el server, bro.", isBot: true }]);
+      setMessages(prev => [...prev, { text: "Error de conexión con el server", isBot: true }]);
     } finally {
       setIsLoading(false);
     }

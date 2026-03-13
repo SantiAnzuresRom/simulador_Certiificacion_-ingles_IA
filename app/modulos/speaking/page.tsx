@@ -13,6 +13,8 @@ import {
   Send,
   Volume2,
   Sparkles,
+  Award,
+  AlertCircle
 } from "lucide-react";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,13 +33,14 @@ export default function SpeakingModule() {
   const [transcript, setTranscript] = useState("");
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
+  const [errorStatus, setErrorStatus] = useState<string | null>(null);
   
-  // Referencia para el reconocimiento de voz
   const recognitionRef = useRef<any>(null);
 
   const fetchTask = useCallback(async (uid: string) => {
     try {
       setLoading(true);
+      setErrorStatus(null);
       const progressRef = doc(db, "user_progress", uid);
       const snap = await getDoc(progressRef);
       const levelToUse = snap.exists() ? snap.data().currentLevel : "B1";
@@ -51,11 +54,11 @@ export default function SpeakingModule() {
 
       const data = await res.json();
       setTask({
-        prompt: data.prompt || "pronuncia la oración:",
+        prompt: data.prompt || "Pronounce the sentence:",
         targetSentence: data.targetSentence || data.sentence || "The technology of today is the magic of tomorrow.",
       });
     } catch (e) {
-      console.error("fetch error:", e);
+      console.error("Fetch error:", e);
     } finally {
       setLoading(false);
     }
@@ -72,30 +75,48 @@ export default function SpeakingModule() {
     });
     return () => {
       unsub();
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.stop();
+      }
     };
   }, [router, fetchTask]);
 
-  const startSpeechRecognition = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const startSpeechRecognition = async () => {
+    setErrorStatus(null);
     
-    if (!SpeechRecognition) {
-      alert("Navegador no compatible.");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err) {
+      setErrorStatus("permission-denied");
       return;
     }
 
-    // Limpiar instancia previa si existe para evitar error de red
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      setErrorStatus("not-supported");
+      return;
+    }
+
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
+      recognitionRef.current.onerror = null;
+      try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
     }
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
-    recognition.continuous = false; // Cambiado a false para mayor estabilidad
+    recognition.continuous = false;
     recognition.interimResults = true;
 
-    recognition.onstart = () => setIsRecording(true);
+    recognition.onstart = () => {
+      setIsRecording(true);
+      setErrorStatus(null);
+    };
 
     recognition.onresult = (e: any) => {
       const current = Array.from(e.results)
@@ -106,20 +127,33 @@ export default function SpeakingModule() {
     };
 
     recognition.onerror = (e: any) => {
-      console.error("Speech Error:", e.error);
+      console.warn("Speech Recognition Error:", e.error);
       setIsRecording(false);
+      
       if (e.error === 'network') {
-        alert("Error de red: Asegúrate de estar en Brave/Chrome y tener internet estable.");
+        setErrorStatus("network-error");
+      } else if (e.error === 'not-allowed') {
+        setErrorStatus("permission-denied");
+      } else {
+        setErrorStatus(e.error);
       }
+      
+      recognition.stop();
     };
 
     recognition.onend = () => {
       setIsRecording(false);
-      recognitionRef.current = null;
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    
+    setTimeout(() => {
+      try {
+        recognition.start();
+      } catch (e) {
+        console.error("Start Error:", e);
+      }
+    }, 200);
   };
 
   const stopSpeechRecognition = () => {
@@ -132,21 +166,32 @@ export default function SpeakingModule() {
     if (!transcript || !task || !userUid) return;
     stopSpeechRecognition();
 
-    const target = task.targetSentence.toLowerCase().replace(/[^\w\s]/g, "");
-    const input = transcript.toLowerCase().replace(/[^\w\s]/g, "");
+    // Normalización de texto para comparación precisa
+    const cleanText = (text: string) => text.replace(/[^\w\s]/g, "").toLowerCase().trim();
+    
+    const target = cleanText(task.targetSentence);
+    const input = cleanText(transcript);
+    
     const targetWords = target.split(/\s+/).filter(Boolean);
     const inputWords = input.split(/\s+/).filter(Boolean);
+    
     let matches = 0;
-    targetWords.forEach((word) => { if (inputWords.includes(word)) matches++; });
+    targetWords.forEach((word) => { 
+      if (inputWords.includes(word)) matches++; 
+    });
 
     const finalScore = Math.min(100, Math.round((matches / targetWords.length) * 100));
     setScore(finalScore);
     
-    const progressRef = doc(db, "user_progress", userUid);
-    await updateDoc(progressRef, {
-      [`modules_${currentLevel}.speaking`]: finalScore,
-      updatedAt: new Date().toISOString(),
-    });
+    try {
+      const progressRef = doc(db, "user_progress", userUid);
+      await updateDoc(progressRef, {
+        [`modules_${currentLevel}.speaking`]: finalScore,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (e) { 
+      console.error("Firestore update error:", e); 
+    }
     
     setShowResult(true);
   };
@@ -154,137 +199,164 @@ export default function SpeakingModule() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-sans">
-        <div className="relative w-28 h-28 mb-10">
-          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }} className="absolute inset-0 border-b-2 border-cyan-500 rounded-full" />
-          <motion.div animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="absolute inset-2 border-t-2 border-[#10b981] rounded-full" />
+        <div className="relative w-24 h-24 mb-6">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }} className="absolute inset-0 border-b-2 border-orange-500 rounded-full" />
+          <motion.div animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="absolute inset-2 border-t-2 border-amber-200 rounded-full" />
         </div>
-        <p className="text-cyan-400 font-medium text-[13px] tracking-[0.3em] animate-pulse italic lowercase">
-          generando misión de voz nivel {currentLevel}
-        </p>
+        <p className="text-orange-500 font-bold tracking-[0.4em] animate-pulse uppercase text-[10px]">SYNCING VOICE ENGINE...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col font-sans selection:bg-orange-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col font-sans overflow-x-hidden">
       
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-8 py-5 flex items-center justify-between">
+      <nav className="max-w-[1400px] mx-auto w-full px-8 py-10 flex justify-between items-center relative z-50">
         <div className="flex items-center gap-6">
-          <NextLink href="/modulos" className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all active:scale-95 shadow-inner group">
-            <ArrowLeft size={18} className="text-slate-400 group-hover:text-white transition-colors" />
+          <NextLink href="/modulos" className="p-4 bg-white/[0.03] rounded-2xl border border-white/10 hover:bg-white/10 transition-all group">
+            <ArrowLeft size={20} className="text-white/60 group-hover:text-white" />
           </NextLink>
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl text-[#020617] shadow-lg shadow-orange-500/20">S</div>
+            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+              <Mic size={24} className="text-[#020617]" />
+            </div>
             <div>
-              <p className="text-[10px] font-bold text-orange-500 italic tracking-[0.1em] mb-0.5 lowercase">certifica ai</p>
-              <h1 className="text-xl font-black italic tracking-tighter lowercase flex items-center gap-2">
-                 speaking lab <Mic size={20} className="text-orange-500" />
-              </h1>
+              <h1 className="text-xl font-bold tracking-tight">Speaking Lab</h1>
+              <p className="text-[10px] font-black tracking-[0.2em] text-orange-500 uppercase italic">{currentLevel} Module</p>
             </div>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main className="max-w-[1400px] mx-auto w-full px-6 py-12 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-10 relative z-10">
-        
-        {/* Panel Izquierdo: Oración Target (TEXTO MÁS PEQUEÑO) */}
-        <div className="lg:col-span-7 h-full">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-br from-slate-950 to-slate-900/50 p-10 md:p-14 rounded-[45px] border border-white/10 shadow-3xl h-[70vh] flex flex-col relative overflow-hidden group transition-all duration-500 hover:border-orange-500/20">
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-500/30 to-transparent" />
-            <div className="flex items-center gap-3 mb-8">
-              <div className="h-[1px] w-8 bg-orange-500/50" />
-              <h2 className="text-[10px] font-bold text-orange-500 italic tracking-[0.4em] lowercase">vocal_target_mission</h2>
+      <main className="max-w-[1400px] mx-auto w-full px-8 flex-1 flex flex-col justify-center relative z-10 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch">
+          
+          <motion.section 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white/[0.02] border border-white/[0.08] p-12 rounded-[3rem] backdrop-blur-3xl shadow-2xl relative flex flex-col justify-center min-h-[400px]"
+          >
+            <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-orange-500 to-amber-300" />
+            <div className="flex items-center gap-3 mb-10">
+              <Sparkles size={16} className="text-orange-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Vocal Mission</span>
             </div>
-            {/* Achicado de text-4xl/5xl a text-2xl/3xl */}
-            <h1 className="text-2xl md:text-3xl font-black text-white italic mb-10 tracking-tighter leading-[1.4] lowercase">
-              "{task?.targetSentence}"
-            </h1>
-            <div className="mt-auto">
-              <button 
-                onClick={() => {
-                  window.speechSynthesis.cancel();
-                  const u = new SpeechSynthesisUtterance(task?.targetSentence);
-                  u.lang = "en-US"; u.rate = 0.9;
-                  window.speechSynthesis.speak(u);
-                }}
-                className="flex items-center gap-4 px-8 py-4 bg-orange-500/10 rounded-2xl text-orange-400 hover:bg-orange-500/20 transition-all border border-orange-500/20 font-bold italic tracking-widest text-xs"
-              >
-                <Volume2 size={20} /> ESCUCHAR GUÍA NEURAL
-              </button>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Panel Derecho: Interacción */}
-        <div className="lg:col-span-5">
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-slate-900/30 backdrop-blur-sm rounded-[45px] border border-white/5 p-10 flex flex-col gap-8 sticky top-32 shadow-2xl h-fit">
             
-            <div className="space-y-6 text-center">
-              <h3 className="text-2xl font-extrabold italic tracking-tighter text-white lowercase">
-                {isRecording ? "sincronizando voz..." : "listo para grabar"}
+            <h2 className="text-3xl md:text-4xl font-light leading-[1.4] text-slate-100 italic mb-10">
+              "{task?.targetSentence}"
+            </h2>
+
+            <button 
+              onClick={() => {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(task?.targetSentence);
+                u.lang = "en-US"; u.rate = 0.85;
+                window.speechSynthesis.speak(u);
+              }}
+              className="w-fit flex items-center gap-3 px-6 py-4 bg-orange-500/10 rounded-2xl text-orange-400 hover:bg-orange-500/20 transition-all border border-orange-500/20 font-bold text-[10px] uppercase tracking-widest"
+            >
+              <Volume2 size={18} /> Audio Guide
+            </button>
+          </motion.section>
+
+          <div className="flex flex-col gap-4 justify-center">
+            <motion.div 
+              className="bg-white/[0.02] border border-white/[0.08] p-10 rounded-[3rem] text-center flex flex-col items-center gap-8 shadow-2xl relative overflow-hidden"
+              animate={isRecording ? { borderColor: "rgba(249, 115, 22, 0.4)" } : {}}
+            >
+              <AnimatePresence>
+                {errorStatus && (
+                  <motion.div 
+                    initial={{ y: -50, opacity: 0 }} 
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -50, opacity: 0 }}
+                    className="absolute top-6 inset-x-6 z-20"
+                  >
+                    <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4">
+                      <AlertCircle className="text-red-500 shrink-0" size={20} />
+                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest text-left">
+                        {errorStatus === "network-error" 
+                          ? "Network connection issue. Please check your internet." 
+                          : "Voice error: Check your microphone permissions."}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <h3 className="text-xl font-bold italic tracking-tighter mt-8">
+                {isRecording ? "Listening..." : "Ready to Record"}
               </h3>
 
-              {/* Caja de Transcripción (ARRIBA) */}
-              <div className="bg-black/20 p-8 rounded-3xl border border-white/5 min-h-[140px] flex items-center justify-center text-center shadow-inner relative overflow-hidden">
-                <p className="text-xl font-medium italic text-slate-300 leading-relaxed lowercase">
-                  {transcript || "tu voz aparecerá aquí..."}
+              <div className="bg-black/40 w-full p-8 rounded-[2rem] border border-white/5 min-h-[120px] flex items-center justify-center">
+                <p className={`text-lg italic leading-relaxed font-medium ${transcript ? "text-white" : "text-white/20"}`}>
+                  {transcript || "Speak now..."}
                 </p>
-                {!transcript && !isRecording && (
-                  <Sparkles size={16} className="absolute bottom-4 right-5 text-slate-700 opacity-50" />
-                )}
               </div>
-              
-              {/* Botón de Micro (ABAJO) */}
-              <div className="relative flex justify-center py-4">
+
+              <div className="relative">
                 <AnimatePresence>
                   {isRecording && (
-                    <motion.div initial={{ scale: 1, opacity: 0.5 }} animate={{ scale: 2.2, opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, repeat: Infinity }} className="absolute inset-0 m-auto w-28 h-28 bg-red-500 rounded-full" />
+                    <motion.div 
+                      initial={{ scale: 1, opacity: 0.5 }} 
+                      animate={{ scale: 2, opacity: 0 }} 
+                      exit={{ opacity: 0 }} 
+                      transition={{ duration: 1.5, repeat: Infinity }} 
+                      className="absolute inset-0 bg-orange-500 rounded-full" 
+                    />
                   )}
                 </AnimatePresence>
                 <button
-                  onClick={() => {
-                    if (isRecording) stopSpeechRecognition();
-                    else startSpeechRecognition();
-                  }}
-                  className={`w-28 h-28 rounded-full flex items-center justify-center relative z-10 transition-all active:scale-90 ${isRecording ? "bg-red-500 shadow-[0_0_60px_rgba(239,68,68,0.4)]" : "bg-orange-500 hover:bg-orange-400 shadow-xl shadow-orange-500/20"}`}
+                  onClick={() => isRecording ? stopSpeechRecognition() : startSpeechRecognition()}
+                  className={`w-24 h-24 rounded-full flex items-center justify-center relative z-10 transition-all active:scale-90 ${
+                    isRecording 
+                    ? "bg-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)]" 
+                    : "bg-orange-500 hover:bg-orange-400 shadow-xl shadow-orange-500/20"
+                  }`}
                 >
-                  {isRecording ? <MicOff size={40} /> : <Mic size={40} className="text-[#020617]" />}
+                  {isRecording ? <MicOff size={32} /> : <Mic size={32} className="text-[#020617]" />}
                 </button>
               </div>
-            </div>
+            </motion.div>
 
             <button
               disabled={!transcript || isRecording}
               onClick={handleEvaluate}
-              className="w-full py-7 bg-white text-[#020617] rounded-[30px] font-black italic tracking-[0.2em] text-[11px] disabled:opacity-20 hover:bg-orange-500 transition-all flex items-center justify-center gap-4 shadow-xl lowercase"
+              className="w-full py-8 bg-white text-black hover:bg-orange-500 hover:text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] transition-all duration-500 flex items-center justify-center gap-3 shadow-2xl disabled:opacity-20 mt-4"
             >
-              finalizar protocolo <Send size={18} />
+              Analyze Speech <Send size={18} />
             </button>
-          </motion.div>
+          </div>
+
         </div>
       </main>
-      
-      {/* Modal de Resultados omitido para brevedad, pero igual al anterior */}
+
       <AnimatePresence>
         {showResult && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/98 backdrop-blur-3xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#020617] border border-white/10 p-12 md:p-16 rounded-[60px] text-center max-w-xl w-full relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent" />
-              <div className="w-20 h-20 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-10 border border-orange-500/20">
-                <CheckCircle2 size={45} strokeWidth={1.5} />
-              </div>
-              <p className="text-orange-500/60 text-[11px] font-bold italic tracking-[0.5em] mb-4 lowercase">análisis finalizado</p>
-              <div className="flex items-center justify-center gap-4 mb-14">
-                <h2 className="text-9xl font-black italic text-white tracking-tighter">{score}</h2>
-                <span className="text-5xl font-black text-orange-500 italic">%</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <button onClick={() => { setShowResult(false); setTranscript(""); fetchTask(userUid!); }} className="w-full py-6 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-bold italic text-[10px] tracking-widest flex items-center justify-center gap-3 lowercase">
-                  <RotateCcw size={18} /> reintentar misión
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/95 backdrop-blur-3xl">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              className="bg-white/[0.03] border border-white/10 p-16 rounded-[4rem] text-center max-w-xl w-full shadow-2xl relative overflow-hidden"
+            >
+              <Award className="mx-auto text-orange-400 mb-8" size={64} />
+              <h2 className="text-9xl font-black tracking-tighter text-white mb-2">
+                {score}%
+              </h2>
+              <p className="text-white/20 text-[10px] font-black tracking-[0.5em] uppercase mb-12">Accuracy Report</p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => { setShowResult(false); setTranscript(""); fetchTask(userUid!); }} 
+                  className="py-6 bg-white/[0.05] border border-white/10 rounded-3xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all"
+                >
+                  <RotateCcw size={16} /> Retry
                 </button>
-                <button onClick={() => router.push("/modulos")} className="w-full py-6 bg-orange-500 text-[#020617] rounded-2xl font-black italic text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20 lowercase">
-                  <LayoutGrid size={18} /> volver a módulos
+                <button 
+                  onClick={() => router.push("/modulos")} 
+                  className="py-6 bg-white text-black rounded-3xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-orange-500 hover:text-white transition-all shadow-lg"
+                >
+                  <LayoutGrid size={16} /> Finish
                 </button>
               </div>
             </motion.div>
